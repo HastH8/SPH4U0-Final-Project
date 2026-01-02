@@ -1,5 +1,5 @@
 export const CONFIG = {
-	DEBUG_MODE: true,
+	DEBUG_MODE: false,
 	WEBSOCKET_URL: import.meta.env.VITE_WEBSOCKET_URL ?? "ws://192.168.0.155:81",
 	SAMPLE_RATE_HZ: 30,
 	MAX_HISTORY: 2400,
