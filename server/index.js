@@ -2,7 +2,7 @@ import http from "http";
 import { WebSocketServer } from "ws";
 
 const PORT = process.env.PORT || 8080;
-const VERBOSE_LOG = process.env.VERBOSE_LOG !== "false";
+const VERBOSE_LOG = true;
 
 const log = (...args) => {
 	if (!VERBOSE_LOG) return;
@@ -87,7 +87,14 @@ wss.on("connection", (socket, req) => {
 
 	socket.on("close", (code, reason) => {
 		clients.delete(socket);
-		log("WS closed", socket.id, "code:", code, "reason:", reason?.toString?.() || "");
+		log(
+			"WS closed",
+			socket.id,
+			"code:",
+			code,
+			"reason:",
+			reason?.toString?.() || ""
+		);
 	});
 
 	socket.on("error", (err) => {
