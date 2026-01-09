@@ -54,7 +54,12 @@ const SnapshotModal = ({ isOpen, onClose, snapshotData, view, windowSeconds }) =
                 </button>
               </div>
             </div>
-            <div ref={containerRef} className="rounded-[20px] border border-white/10 bg-white/5 p-4">
+            <div
+              ref={containerRef}
+              className="snapshot-surface rounded-[20px] border border-white/10 p-4"
+            >
+              <div className="absolute inset-0 bg-white/5" />
+              <div className="relative z-10">
               {snapshotData?.length ? (
                 <LiveGraph
                   history={snapshotData}
@@ -68,6 +73,7 @@ const SnapshotModal = ({ isOpen, onClose, snapshotData, view, windowSeconds }) =
                   No snapshot data captured yet.
                 </div>
               )}
+              </div>
             </div>
           </GlassPanel>
         </motion.div>

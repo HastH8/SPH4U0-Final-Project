@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { ParentSize } from "@visx/responsive";
 import { Group } from "@visx/group";
 import { LinePath } from "@visx/shape";
@@ -115,52 +115,71 @@ const getYDomain = (data, series) => {
 };
 
 const OrientationChassis = ({ rotation }) => {
+	const chassisRef = useRef(null);
+
+	useFrame(() => {
+		if (!chassisRef.current) return;
+		const damping = 0.1;
+		chassisRef.current.rotation.x +=
+			(rotation[0] - chassisRef.current.rotation.x) * damping;
+		chassisRef.current.rotation.y +=
+			(rotation[1] - chassisRef.current.rotation.y) * damping;
+		chassisRef.current.rotation.z +=
+			(rotation[2] - chassisRef.current.rotation.z) * damping;
+	});
+
 	return (
-		<Canvas camera={{ position: [0, 2.4, 4.2], fov: 45 }}>
+		<Canvas camera={{ position: [0, 2.6, 5.2], fov: 42 }}>
 			<ambientLight intensity={0.65} />
 			<directionalLight position={[3, 4, 2]} intensity={1.1} />
-			<mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.45, 0]}>
-				<circleGeometry args={[2.6, 64]} />
-				<meshStandardMaterial
-					color="#0f172a"
-					transparent
-					opacity={0.5}
-					metalness={0.2}
-					roughness={0.9}
-				/>
+			<mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
+				<circleGeometry args={[3.2, 64]} />
+				<meshStandardMaterial color="#0b1120" roughness={0.95} metalness={0.1} />
 			</mesh>
-			<group rotation={rotation}>
+			<group ref={chassisRef}>
 				<mesh position={[0, 0, 0]}>
-					<boxGeometry args={[3.2, 0.35, 1.6]} />
+					<boxGeometry args={[3.4, 0.4, 1.7]} />
 					<meshStandardMaterial
 						color="#c7f9ff"
 						emissive="#00f7ff"
-						emissiveIntensity={0.25}
-						metalness={0.45}
-						roughness={0.25}
+						emissiveIntensity={0.18}
+						metalness={0.55}
+						roughness={0.22}
 					/>
 				</mesh>
-				<mesh position={[0, 0.38, 0.05]}>
-					<boxGeometry args={[1.5, 0.25, 1.0]} />
+				<mesh position={[0.3, 0.45, 0.05]}>
+					<boxGeometry args={[1.6, 0.3, 1.1]} />
 					<meshStandardMaterial
 						color="#1e293b"
 						emissive="#38bdf8"
-						emissiveIntensity={0.15}
-						metalness={0.3}
-						roughness={0.4}
+						emissiveIntensity={0.12}
+						metalness={0.25}
+						roughness={0.5}
 					/>
 				</mesh>
+				<mesh position={[-1.2, 0.1, 0]}>
+					<boxGeometry args={[0.7, 0.25, 1.4]} />
+					<meshStandardMaterial color="#93c5fd" metalness={0.2} roughness={0.4} />
+				</mesh>
+				<mesh position={[1.65, 0.02, 0]}>
+					<boxGeometry args={[0.3, 0.2, 1.3]} />
+					<meshStandardMaterial color="#0f172a" metalness={0.1} roughness={0.6} />
+				</mesh>
 				{[
-					[1.2, -0.25, 0.75],
-					[-1.2, -0.25, 0.75],
-					[1.2, -0.25, -0.75],
-					[-1.2, -0.25, -0.75],
+					[1.25, -0.3, 0.82],
+					[-1.25, -0.3, 0.82],
+					[1.25, -0.3, -0.82],
+					[-1.25, -0.3, -0.82],
 				].map(([x, y, z]) => (
 					<mesh key={`${x}-${z}`} position={[x, y, z]} rotation={[0, 0, Math.PI / 2]}>
-						<cylinderGeometry args={[0.26, 0.26, 0.22, 22]} />
-						<meshStandardMaterial color="#0b1220" metalness={0.2} roughness={0.8} />
+						<cylinderGeometry args={[0.28, 0.28, 0.24, 24]} />
+						<meshStandardMaterial color="#0b0f1a" metalness={0.2} roughness={0.85} />
 					</mesh>
 				))}
+				<mesh position={[0, 0.52, -0.25]}>
+					<boxGeometry args={[0.25, 0.2, 0.25]} />
+					<meshStandardMaterial color="#22d3ee" emissive="#22d3ee" emissiveIntensity={0.3} />
+				</mesh>
 			</group>
 		</Canvas>
 	);
@@ -446,11 +465,12 @@ const VisxLineChart = ({ data, config, view, series }) => {
 
 const LiveGraph = ({ history, data, view, windowSeconds, paused, stretch = false }) => {
 	if (view === "orientation") {
-		const rotation = [
-			(data?.gx ?? 0) * 0.9,
-			(data?.gy ?? 0) * 0.9,
-			(data?.gz ?? 0) * 0.9,
-		];
+		const applyDeadzone = (value, zone = 0.03) =>
+			Math.abs(value) < zone ? 0 : value;
+		const pitch = clamp(applyDeadzone((data?.gx ?? 0) * 0.28), -0.55, 0.55);
+		const roll = clamp(applyDeadzone((data?.gy ?? 0) * 0.28), -0.55, 0.55);
+		const yaw = clamp(applyDeadzone((data?.gz ?? 0) * 0.22), -0.9, 0.9);
+		const rotation = [pitch, yaw, -roll];
 
 		return (
 			<div

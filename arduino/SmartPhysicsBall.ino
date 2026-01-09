@@ -9,6 +9,9 @@
 // =========================
 #define DEBUG_MODE false
 #define IMPACT_THRESHOLD 8.0f
+#define IMPACT_JERK_THRESHOLD 20.0f
+#define IMPACT_HOLD_MS 220
+#define IMPACT_BASELINE_ALPHA 0.06f
 #define STREAM_RATE_MS 5
 #define CALIBRATION_TIME_MS 2000
 #define SMOOTHING_ALPHA 0.25f
@@ -22,14 +25,14 @@
 // =========================
 // WIFI SETTINGS
 // =========================
-const char *WIFI_SSID = "Hast";
+const char *WIFI_SSID = "iPad";
 const char *WIFI_PASS = "Hast2008";
 
 // =========================
 // WEBSOCKET CLIENT (Railway)
 // =========================
 const char *WS_HOST = "sph4u0-dashboard.up.railway.app";
-const uint16_t WS_PORT = 8080;
+const uint16_t WS_PORT = 443;
 const char *WS_PATH = "/";
 
 // =========================
@@ -56,6 +59,10 @@ Vec3 velocityVec = {0.0f, 0.0f, 0.0f};
 
 float velocity = 0.0f;
 bool impactDetected = false;
+float accelMagBaseline = 0.0f;
+float lastAccelMag = 0.0f;
+float impactPeak = 0.0f;
+unsigned long impactStartMs = 0;
 int stationaryCount = 0;
 unsigned long lastLog = 0;
 const unsigned long LOG_INTERVAL_MS = 0; // 0 = log every loop
@@ -608,7 +615,20 @@ void loop() {
   Vec3 linearAccelWorld = rotateByQuat(accelSmooth);
   float planarAccelMag = sqrtf(linearAccelWorld.x * linearAccelWorld.x + linearAccelWorld.y * linearAccelWorld.y);
   float verticalAccelMag = fabs(linearAccelWorld.z);
+  float accelMag = magnitude(linearAccelWorld);
   float gyroMag = magnitude(gyroSmooth);
+
+  if (accelMagBaseline <= 0.001f) {
+    accelMagBaseline = accelMag;
+  }
+  accelMagBaseline = lpf(accelMag, accelMagBaseline, IMPACT_BASELINE_ALPHA);
+  float impactSignal = accelMag - accelMagBaseline;
+  if (impactSignal < 0.0f) impactSignal = 0.0f;
+  float jerk = 0.0f;
+  if (dt > 0.0f) {
+    jerk = fabs(accelMag - lastAccelMag) / dt;
+  }
+  lastAccelMag = accelMag;
 
   velocityVec.x += linearAccelWorld.x * dt;
   velocityVec.y += linearAccelWorld.y * dt;
@@ -635,14 +655,22 @@ void loop() {
 
   velocity = sqrtf(velocityVec.x * velocityVec.x + velocityVec.y * velocityVec.y);
 
-  // Impact detection with hysteresis
-  if (!impactDetected && verticalAccelMag >= IMPACT_THRESHOLD) {
+  // Impact detection: spike + jerk to avoid false positives on smooth motion
+  if (!impactDetected && impactSignal >= IMPACT_THRESHOLD && jerk >= IMPACT_JERK_THRESHOLD) {
     impactDetected = true;
-  } else if (impactDetected && verticalAccelMag < (IMPACT_THRESHOLD * 0.6f)) {
-    impactDetected = false;
+    impactStartMs = now;
+    impactPeak = impactSignal;
+  } else if (impactDetected) {
+    if (impactSignal > impactPeak) {
+      impactPeak = impactSignal;
+    }
+    if ((now - impactStartMs) > IMPACT_HOLD_MS && impactSignal < (IMPACT_THRESHOLD * 0.5f)) {
+      impactDetected = false;
+      impactPeak = 0.0f;
+    }
   }
 
-  float impactForce = impactDetected ? verticalAccelMag : 0.0f;
+  float impactForce = impactDetected ? impactPeak : 0.0f;
 
   StaticJsonDocument<256> doc;
   doc["accel"]["x"] = accelSmooth.x;
@@ -681,8 +709,12 @@ void loop() {
     Serial.println(velocityVec.z, 4);
     Serial.print("Velocity mag: ");
     Serial.println(velocity, 4);
-    Serial.print("Impact mag: ");
-    Serial.println(verticalAccelMag, 4);
+    Serial.print("Accel mag: ");
+    Serial.println(accelMag, 4);
+    Serial.print("Impact signal: ");
+    Serial.println(impactSignal, 4);
+    Serial.print("Jerk: ");
+    Serial.println(jerk, 4);
     Serial.print("Impact detected: ");
     Serial.println(impactDetected ? "true" : "false");
     Serial.print("JSON: ");
