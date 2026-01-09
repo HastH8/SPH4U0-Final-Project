@@ -114,28 +114,62 @@ const getYDomain = (data, series) => {
 	return { min: min - padding, max: max + padding };
 };
 
-const OrientationCube = ({ rotation }) => {
+const OrientationChassis = ({ rotation }) => {
 	return (
-		<Canvas camera={{ position: [0, 0, 4], fov: 50 }}>
-			<ambientLight intensity={0.6} />
-			<directionalLight position={[2, 4, 3]} intensity={1.1} />
-			<mesh rotation={rotation}>
-				<boxGeometry args={[1.8, 1.8, 1.8]} />
+		<Canvas camera={{ position: [0, 2.4, 4.2], fov: 45 }}>
+			<ambientLight intensity={0.65} />
+			<directionalLight position={[3, 4, 2]} intensity={1.1} />
+			<mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.45, 0]}>
+				<circleGeometry args={[2.6, 64]} />
 				<meshStandardMaterial
-					color="#c7f9ff"
-					emissive="#00f7ff"
-					emissiveIntensity={0.35}
-					metalness={0.4}
-					roughness={0.2}
+					color="#0f172a"
+					transparent
+					opacity={0.5}
+					metalness={0.2}
+					roughness={0.9}
 				/>
 			</mesh>
+			<group rotation={rotation}>
+				<mesh position={[0, 0, 0]}>
+					<boxGeometry args={[3.2, 0.35, 1.6]} />
+					<meshStandardMaterial
+						color="#c7f9ff"
+						emissive="#00f7ff"
+						emissiveIntensity={0.25}
+						metalness={0.45}
+						roughness={0.25}
+					/>
+				</mesh>
+				<mesh position={[0, 0.38, 0.05]}>
+					<boxGeometry args={[1.5, 0.25, 1.0]} />
+					<meshStandardMaterial
+						color="#1e293b"
+						emissive="#38bdf8"
+						emissiveIntensity={0.15}
+						metalness={0.3}
+						roughness={0.4}
+					/>
+				</mesh>
+				{[
+					[1.2, -0.25, 0.75],
+					[-1.2, -0.25, 0.75],
+					[1.2, -0.25, -0.75],
+					[-1.2, -0.25, -0.75],
+				].map(([x, y, z]) => (
+					<mesh key={`${x}-${z}`} position={[x, y, z]} rotation={[0, 0, Math.PI / 2]}>
+						<cylinderGeometry args={[0.26, 0.26, 0.22, 22]} />
+						<meshStandardMaterial color="#0b1220" metalness={0.2} roughness={0.8} />
+					</mesh>
+				))}
+			</group>
 		</Canvas>
 	);
 };
 
-const VisxLineChart = ({ data, config, view }) => {
+const VisxLineChart = ({ data, config, view, series }) => {
   const [tooltip, setTooltip] = useState(null);
   const [zoomDomain, setZoomDomain] = useState(null);
+  const seriesList = series && series.length ? series : config.series;
 
 	return (
 		<ParentSize>
@@ -153,7 +187,7 @@ const VisxLineChart = ({ data, config, view }) => {
 				const maxX = timestamps.length ? Math.max(...timestamps) : Date.now();
 				const safeMinX = minX === maxX ? minX - 500 : minX;
 				const safeMaxX = minX === maxX ? maxX + 500 : maxX;
-				const { min: minY, max: maxY } = getYDomain(data, config.series);
+				const { min: minY, max: maxY } = getYDomain(data, seriesList);
 
         const fullDomain = { start: safeMinX, end: safeMaxX };
         const zoomStart = zoomDomain ? Math.max(fullDomain.start, zoomDomain.start) : fullDomain.start;
@@ -230,7 +264,7 @@ const VisxLineChart = ({ data, config, view }) => {
           <div className="relative h-full w-full">
             <svg width={width} height={height} className="overflow-visible">
 							<defs>
-								{config.series.map((series) => (
+								{seriesList.map((series) => (
 									<linearGradient
 										key={`${view}-${series.key}-gradient`}
 										id={`${view}-${series.key}-gradient`}
@@ -284,7 +318,7 @@ const VisxLineChart = ({ data, config, view }) => {
 								/>
 
 								<Group clipPath={`url(#${view}-clip)`}>
-									{config.series.map((series) => (
+									{seriesList.map((series) => (
 										<LinePath
 											key={series.key}
 											data={data}
@@ -311,7 +345,7 @@ const VisxLineChart = ({ data, config, view }) => {
 									)}
 
 									{tooltip &&
-										config.series.map((series) => {
+										seriesList.map((series) => {
 											const value = tooltip.point?.[series.key];
 											if (!Number.isFinite(value)) return null;
 											return (
@@ -327,7 +361,7 @@ const VisxLineChart = ({ data, config, view }) => {
 											);
 										})}
 
-									{config.series
+									{seriesList
 										.filter((series) => series.highlightPeaks)
 										.flatMap((series) =>
 											data.map((point, index) => {
@@ -383,7 +417,7 @@ const VisxLineChart = ({ data, config, view }) => {
 									{formatTime(tooltip.point.timestamp)}
 								</div>
 								<div className="space-y-1">
-									{config.series.map((series) => (
+									{seriesList.map((series) => (
 										<div
 											key={`tooltip-${series.key}`}
 											className="flex items-center gap-2"
@@ -425,14 +459,22 @@ const LiveGraph = ({ history, data, view, windowSeconds, paused, stretch = false
 				}`}
 			>
 				<div className="h-full w-full overflow-hidden rounded-[24px] border border-white/10 bg-white/5">
-					<OrientationCube rotation={rotation} />
+					<OrientationChassis rotation={rotation} />
 				</div>
 			</div>
 		);
 	}
 
 	const config = GRAPH_CONFIG[view];
+	const [visibleKeys, setVisibleKeys] = useState(
+		() => new Set(config?.series.map((series) => series.key) ?? [])
+	);
 	const frozenRef = useRef([]);
+
+	useEffect(() => {
+		if (!config) return;
+		setVisibleKeys(new Set(config.series.map((series) => series.key)));
+	}, [view]);
 
 	const windowedData = useMemo(() => {
 		if (!history?.length) return [];
@@ -448,6 +490,12 @@ const LiveGraph = ({ history, data, view, windowSeconds, paused, stretch = false
 	}, [windowedData, paused]);
 
 	const displayData = paused ? frozenRef.current : windowedData;
+	const activeSeries = useMemo(() => {
+		if (!config) return [];
+		return config.series.filter((series) => visibleKeys.has(series.key));
+	}, [config, visibleKeys]);
+	const seriesToRender = activeSeries.length ? activeSeries : config.series;
+	const canFilter = config.series.length > 1;
 
 	const containerClass = stretch
 		? "h-full w-full"
@@ -463,17 +511,52 @@ const LiveGraph = ({ history, data, view, windowSeconds, paused, stretch = false
 					{config?.title}
 				</p>
         <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-white/60">
-          {config?.series.map((series) => (
-            <div key={series.key} className="flex items-center gap-2">
-              <span
-                className="h-1.5 w-6 rounded-full"
-								style={{
-									backgroundImage: `linear-gradient(90deg, ${series.gradient[0]}, ${series.gradient[1]})`,
-								}}
-							/>
-							{series.label}
-						</div>
-					))}
+          {canFilter && (
+            <button
+              type="button"
+              onClick={() =>
+                setVisibleKeys(new Set(config.series.map((series) => series.key)))
+              }
+              className="rounded-full border border-black/10 bg-white/20 px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] text-slate-600 transition hover:border-black/20 dark:border-white/15 dark:bg-white/10 dark:text-white/70 dark:hover:border-white/30"
+            >
+              All
+            </button>
+          )}
+          {config?.series.map((series) => {
+            const isActive = visibleKeys.has(series.key);
+            return (
+              <button
+                type="button"
+                key={series.key}
+                onClick={() =>
+                  setVisibleKeys((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(series.key)) {
+                      if (next.size === 1) return prev;
+                      next.delete(series.key);
+                    } else {
+                      next.add(series.key);
+                    }
+                    return next;
+                  })
+                }
+                className={`flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-medium transition ${
+                  isActive
+                    ? "border-black/10 bg-white/20 text-slate-700 shadow-soft dark:border-white/25 dark:bg-white/10 dark:text-white"
+                    : "border-black/5 text-slate-400 hover:border-black/15 hover:text-slate-600 dark:border-white/10 dark:text-white/40 dark:hover:border-white/25 dark:hover:text-white/70"
+                }`}
+              >
+                <span
+                  className="h-1.5 w-6 rounded-full"
+									style={{
+										backgroundImage: `linear-gradient(90deg, ${series.gradient[0]}, ${series.gradient[1]})`,
+										opacity: isActive ? 1 : 0.35,
+									}}
+								/>
+								{series.label}
+							</button>
+						);
+					})}
           {paused && (
             <span className="rounded-full bg-amber-200/20 px-2 py-1 text-amber-200">
               Paused
@@ -485,7 +568,12 @@ const LiveGraph = ({ history, data, view, windowSeconds, paused, stretch = false
         </div>
       </div>
 			<div className={chartClass}>
-				<VisxLineChart data={displayData} config={config} view={view} />
+				<VisxLineChart
+          data={displayData}
+          config={config}
+          view={view}
+          series={seriesToRender}
+        />
 			</div>
 		</div>
 	);

@@ -12,7 +12,7 @@ const Navbar = ({ isConnected, theme, onToggleTheme }) => {
             <Waves className="h-5 w-5 text-neon-cyan" />
           </div>
           <div>
-            <p className="text-lg font-semibold text-slate-900 dark:text-white">Smart Physics Ball</p>
+            <p className="text-lg font-semibold text-slate-900 dark:text-white">Smart Physics Car</p>
             <p className="text-xs text-slate-600 dark:text-white/60">Live IMU Dashboard</p>
           </div>
         </div>

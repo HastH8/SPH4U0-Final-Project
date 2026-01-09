@@ -8,19 +8,22 @@
 // CONFIGURATION
 // =========================
 #define DEBUG_MODE false
-#define IMPACT_THRESHOLD 12.0f
+#define IMPACT_THRESHOLD 8.0f
 #define STREAM_RATE_MS 5
 #define CALIBRATION_TIME_MS 2000
 #define SMOOTHING_ALPHA 0.25f
 #define GYRO_SMOOTHING_ALPHA 0.2f
 #define MADGWICK_BETA 0.1f
 #define VERBOSE_LOG true
+#define WIFI_CONNECT_TIMEOUT_MS 15000
+#define WIFI_STATUS_LOG_INTERVAL_MS 1000
+#define WIFI_SCAN_ON_FAIL true
 
 // =========================
 // WIFI SETTINGS
 // =========================
-const char *WIFI_SSID = "YOUR_WIFI_SSID";
-const char *WIFI_PASS = "YOUR_WIFI_PASSWORD";
+const char *WIFI_SSID = "Hast";
+const char *WIFI_PASS = "Hast2008";
 
 // =========================
 // WEBSOCKET CLIENT (Railway)
@@ -88,6 +91,28 @@ Vec3 applyBias(const Vec3 &raw, const Vec3 &bias) {
 
 Vec3 smoothVec(const Vec3 &input, const Vec3 &prev, float alpha) {
   return {lpf(input.x, prev.x, alpha), lpf(input.y, prev.y, alpha), lpf(input.z, prev.z, alpha)};
+}
+
+Vec3 crossVec(const Vec3 &a, const Vec3 &b) {
+  return {
+    a.y * b.z - a.z * b.y,
+    a.z * b.x - a.x * b.z,
+    a.x * b.y - a.y * b.x
+  };
+}
+
+Vec3 rotateByQuat(const Vec3 &v) {
+  Vec3 qv = {q1, q2, q3};
+  Vec3 t = crossVec(qv, v);
+  t.x *= 2.0f;
+  t.y *= 2.0f;
+  t.z *= 2.0f;
+  Vec3 cross2 = crossVec(qv, t);
+  return {
+    v.x + q0 * t.x + cross2.x,
+    v.y + q0 * t.y + cross2.y,
+    v.z + q0 * t.z + cross2.z
+  };
 }
 
 void logVec(const char *label, const Vec3 &v) {
@@ -226,19 +251,25 @@ float fakeImpact = 0.0f;
 float fakePhase = 0.0f;
 
 void generateFakeData() {
-  fakePhase += 0.05f;
-  fakeAccel.x = 0.6f * sinf(fakePhase * 1.2f);
-  fakeAccel.y = -9.8f + 0.5f * cosf(fakePhase * 1.0f);
-  fakeAccel.z = 1.1f * sinf(fakePhase * 0.8f);
+  fakePhase += 0.035f;
 
-  fakeGyro.x = 0.2f * sinf(fakePhase * 1.1f);
-  fakeGyro.y = 0.15f * cosf(fakePhase * 1.3f);
-  fakeGyro.z = 0.25f * sinf(fakePhase * 0.9f);
+  float accelPulse = 1.3f * sinf(fakePhase * 0.7f);
+  float lateralWiggle = 0.35f * sinf(fakePhase * 0.4f + 1.2f);
+  float roadNoise = 0.05f * sinf(fakePhase * 2.4f);
 
-  if (random(0, 120) == 0) {
-    fakeImpact = random(12, 22);
+  fakeAccel.x = accelPulse;
+  fakeAccel.y = lateralWiggle;
+  fakeAccel.z = -9.8f + roadNoise;
+
+  float turnRate = 0.6f * sinf(fakePhase * 0.3f);
+  fakeGyro.x = 0.02f * sinf(fakePhase * 0.9f);
+  fakeGyro.y = 0.02f * cosf(fakePhase * 1.1f);
+  fakeGyro.z = turnRate;
+
+  if (random(0, 160) == 0) {
+    fakeImpact = random(8, 16);
   }
-  fakeImpact *= 0.9f;
+  fakeImpact *= 0.85f;
   fakeAccel.z += fakeImpact;
 }
 
@@ -293,22 +324,110 @@ void calibrateIMU() {
 // =========================
 // WIFI + WEBSOCKET
 // =========================
-void connectWiFi() {
+const char *wifiStatusText(int status) {
+  switch (status) {
+    case WL_NO_SHIELD:
+      return "WL_NO_SHIELD";
+    case WL_IDLE_STATUS:
+      return "WL_IDLE_STATUS";
+    case WL_NO_SSID_AVAIL:
+      return "WL_NO_SSID_AVAIL";
+    case WL_SCAN_COMPLETED:
+      return "WL_SCAN_COMPLETED";
+    case WL_CONNECTED:
+      return "WL_CONNECTED";
+    case WL_CONNECT_FAILED:
+      return "WL_CONNECT_FAILED";
+    case WL_CONNECTION_LOST:
+      return "WL_CONNECTION_LOST";
+    case WL_DISCONNECTED:
+      return "WL_DISCONNECTED";
+    default:
+      return "WL_UNKNOWN";
+  }
+}
+
+const char *wifiEncTypeText(uint8_t type) {
+  switch (type) {
+    case ENC_TYPE_WEP:
+      return "WEP";
+    case ENC_TYPE_TKIP:
+      return "WPA";
+    case ENC_TYPE_CCMP:
+      return "WPA2";
+    case ENC_TYPE_NONE:
+      return "OPEN";
+    case ENC_TYPE_AUTO:
+      return "AUTO";
+    default:
+      return "UNKNOWN";
+  }
+}
+
+void scanWiFiNetworks() {
+  if (!VERBOSE_LOG) return;
+  Serial.println("Scanning for WiFi networks...");
+  int count = WiFi.scanNetworks();
+  if (count <= 0) {
+    Serial.println("No WiFi networks found.");
+    return;
+  }
+  Serial.print("Networks found: ");
+  Serial.println(count);
+  for (int i = 0; i < count; i++) {
+    Serial.print(i + 1);
+    Serial.print(") ");
+    Serial.print(WiFi.SSID(i));
+    Serial.print(" | RSSI: ");
+    Serial.print(WiFi.RSSI(i));
+    Serial.print(" dBm | ");
+    Serial.println(wifiEncTypeText(WiFi.encryptionType(i)));
+  }
+}
+
+bool connectWiFi() {
   if (VERBOSE_LOG) {
-    Serial.print("Connecting to WiFi");
+    Serial.print("Connecting to WiFi (timeout ");
+    Serial.print(WIFI_CONNECT_TIMEOUT_MS);
+    Serial.println("ms)");
   }
   WiFi.disconnect();
   WiFi.begin(WIFI_SSID, WIFI_PASS);
 
-  while (WiFi.status() != WL_CONNECTED) {
-    if (VERBOSE_LOG) {
-      Serial.print(".");
+  unsigned long start = millis();
+  unsigned long lastStatusLog = 0;
+  int status = WiFi.status();
+
+  while (status != WL_CONNECTED && (millis() - start < WIFI_CONNECT_TIMEOUT_MS)) {
+    if (VERBOSE_LOG && (millis() - lastStatusLog >= WIFI_STATUS_LOG_INTERVAL_MS)) {
+      Serial.print("WiFi status: ");
+      Serial.print(status);
+      Serial.print(" (");
+      Serial.print(wifiStatusText(status));
+      Serial.println(")");
+      lastStatusLog = millis();
     }
     delay(500);
+    status = WiFi.status();
+  }
+
+  status = WiFi.status();
+  if (status != WL_CONNECTED) {
+    if (VERBOSE_LOG) {
+      Serial.print("WiFi connect timeout, status: ");
+      Serial.print(status);
+      Serial.print(" (");
+      Serial.print(wifiStatusText(status));
+      Serial.println(")");
+    }
+    if (WIFI_SCAN_ON_FAIL) {
+      scanWiFiNetworks();
+    }
+    return false;
   }
 
   if (VERBOSE_LOG) {
-    Serial.println("\nWiFi connected.");
+    Serial.println("WiFi connected.");
     Serial.print("IP: ");
     Serial.println(WiFi.localIP());
     Serial.print("RSSI: ");
@@ -316,6 +435,7 @@ void connectWiFi() {
     Serial.print("Status: ");
     Serial.println(WiFi.status());
   }
+  return true;
 }
 
 void websocketEvent(WStype_t type, uint8_t *payload, size_t length) {
@@ -388,16 +508,17 @@ void setup() {
     calibrateIMU();
   }
 
-  connectWiFi();
-  if (VERBOSE_LOG) {
-    Serial.print("Connecting WebSocket to ");
-    Serial.print(WS_HOST);
-    Serial.print(":");
-    Serial.println(WS_PORT);
+  if (connectWiFi()) {
+    if (VERBOSE_LOG) {
+      Serial.print("Connecting WebSocket to ");
+      Serial.print(WS_HOST);
+      Serial.print(":");
+      Serial.println(WS_PORT);
+    }
+    webSocket.beginSSL(WS_HOST, WS_PORT, WS_PATH);
+    webSocket.onEvent(websocketEvent);
+    webSocket.setReconnectInterval(2000);
   }
-  webSocket.beginSSL(WS_HOST, WS_PORT, WS_PATH);
-  webSocket.onEvent(websocketEvent);
-  webSocket.setReconnectInterval(2000);
   randomSeed(analogRead(A0));
 }
 
@@ -420,9 +541,10 @@ void loop() {
       Serial.println(WiFi.status());
       Serial.println("Reconnecting...");
     }
-    connectWiFi();
-    webSocket.disconnect();
-    webSocket.beginSSL(WS_HOST, WS_PORT, WS_PATH);
+    if (connectWiFi()) {
+      webSocket.disconnect();
+      webSocket.beginSSL(WS_HOST, WS_PORT, WS_PATH);
+    }
   }
 
   unsigned long nowUs = micros();
@@ -483,19 +605,20 @@ void loop() {
   accelSmooth = smoothVec(linearAccel, accelSmooth, SMOOTHING_ALPHA);
   gyroSmooth = smoothVec(gyro, gyroSmooth, GYRO_SMOOTHING_ALPHA);
 
-  float accelMag = magnitude(accelSmooth);
+  Vec3 linearAccelWorld = rotateByQuat(accelSmooth);
+  float planarAccelMag = sqrtf(linearAccelWorld.x * linearAccelWorld.x + linearAccelWorld.y * linearAccelWorld.y);
+  float verticalAccelMag = fabs(linearAccelWorld.z);
   float gyroMag = magnitude(gyroSmooth);
 
-  velocityVec.x += accelSmooth.x * dt;
-  velocityVec.y += accelSmooth.y * dt;
-  velocityVec.z += accelSmooth.z * dt;
+  velocityVec.x += linearAccelWorld.x * dt;
+  velocityVec.y += linearAccelWorld.y * dt;
+  velocityVec.z = 0.0f;
 
   // Drift control: decay velocity slowly
   velocityVec.x *= 0.995f;
   velocityVec.y *= 0.995f;
-  velocityVec.z *= 0.995f;
 
-  if (accelMag < 0.2f && gyroMag < 0.05f) {
+  if (planarAccelMag < 0.2f && gyroMag < 0.05f) {
     stationaryCount++;
   } else {
     stationaryCount = 0;
@@ -510,16 +633,16 @@ void loop() {
     if (fabs(velocityVec.z) < 0.02f) velocityVec.z = 0.0f;
   }
 
-  velocity = magnitude(velocityVec);
+  velocity = sqrtf(velocityVec.x * velocityVec.x + velocityVec.y * velocityVec.y);
 
   // Impact detection with hysteresis
-  if (!impactDetected && accelMag >= IMPACT_THRESHOLD) {
+  if (!impactDetected && verticalAccelMag >= IMPACT_THRESHOLD) {
     impactDetected = true;
-  } else if (impactDetected && accelMag < (IMPACT_THRESHOLD * 0.6f)) {
+  } else if (impactDetected && verticalAccelMag < (IMPACT_THRESHOLD * 0.6f)) {
     impactDetected = false;
   }
 
-  float impactForce = impactDetected ? accelMag : 0.0f;
+  float impactForce = impactDetected ? verticalAccelMag : 0.0f;
 
   StaticJsonDocument<256> doc;
   doc["accel"]["x"] = accelSmooth.x;
@@ -544,6 +667,7 @@ void loop() {
     logVec("Raw gyro", gyroRaw);
     logVec("Gravity", gravity);
     logVec("Linear accel", linearAccel);
+    logVec("Linear accel world", linearAccelWorld);
     logVec("Accel smooth", accelSmooth);
     logVec("Gyro smooth", gyroSmooth);
     logQuat("Quaternion", q0, q1, q2, q3);
@@ -558,7 +682,7 @@ void loop() {
     Serial.print("Velocity mag: ");
     Serial.println(velocity, 4);
     Serial.print("Impact mag: ");
-    Serial.println(accelMag, 4);
+    Serial.println(verticalAccelMag, 4);
     Serial.print("Impact detected: ");
     Serial.println(impactDetected ? "true" : "false");
     Serial.print("JSON: ");

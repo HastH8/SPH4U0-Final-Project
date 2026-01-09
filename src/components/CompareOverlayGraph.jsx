@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ParentSize } from "@visx/responsive";
 import { Group } from "@visx/group";
 import { LinePath } from "@visx/shape";
@@ -71,8 +71,16 @@ const getYDomain = (dataA, dataB, series) => {
 
 const CompareOverlayGraph = ({ view, dataA = [], dataB = [], stretch = false }) => {
 	const config = GRAPH_CONFIG[view];
+	const [visibleKeys, setVisibleKeys] = useState(
+		() => new Set(config?.series.map((series) => series.key) ?? [])
+	);
 	const [tooltip, setTooltip] = useState(null);
 	const [zoomDomain, setZoomDomain] = useState(null);
+
+	useEffect(() => {
+		if (!config) return;
+		setVisibleKeys(new Set(config.series.map((series) => series.key)));
+	}, [view]);
 
 	const indexedDataA = useMemo(
 		() => dataA.map((point, index) => ({ ...point, index })),
@@ -86,6 +94,10 @@ const CompareOverlayGraph = ({ view, dataA = [], dataB = [], stretch = false }) 
 	if (!config) {
 		return null;
 	}
+
+	const activeSeries = config.series.filter((series) => visibleKeys.has(series.key));
+	const seriesToRender = activeSeries.length ? activeSeries : config.series;
+	const canFilter = config.series.length > 1;
 
 	const containerClass = stretch
 		? "h-full w-full"
@@ -101,21 +113,56 @@ const CompareOverlayGraph = ({ view, dataA = [], dataB = [], stretch = false }) 
 					{config.title}
 				</p>
 				<div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-white/60">
-					{config.series.map((series) => (
-						<div key={series.key} className="flex items-center gap-2">
-							<span
-								className="h-1.5 w-5 rounded-full"
-								style={{ backgroundColor: series.colorA }}
-							/>
-							<span
-								className="h-1.5 w-5 rounded-full"
-								style={{
-									backgroundImage: `repeating-linear-gradient(90deg, ${series.colorB} 0 6px, transparent 6px 10px)`,
-								}}
-							/>
-							{series.label}
-						</div>
-					))}
+					{canFilter && (
+						<button
+							type="button"
+							onClick={() =>
+								setVisibleKeys(new Set(config.series.map((series) => series.key)))
+							}
+							className="rounded-full border border-black/10 bg-white/20 px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] text-slate-600 transition hover:border-black/20 dark:border-white/15 dark:bg-white/10 dark:text-white/70 dark:hover:border-white/30"
+						>
+							All
+						</button>
+					)}
+					{config.series.map((series) => {
+						const isActive = visibleKeys.has(series.key);
+						return (
+							<button
+								type="button"
+								key={series.key}
+								onClick={() =>
+									setVisibleKeys((prev) => {
+										const next = new Set(prev);
+										if (next.has(series.key)) {
+											if (next.size === 1) return prev;
+											next.delete(series.key);
+										} else {
+											next.add(series.key);
+										}
+										return next;
+									})
+								}
+								className={`flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-medium transition ${
+									isActive
+										? "border-black/10 bg-white/20 text-slate-700 shadow-soft dark:border-white/25 dark:bg-white/10 dark:text-white"
+										: "border-black/5 text-slate-400 hover:border-black/15 hover:text-slate-600 dark:border-white/10 dark:text-white/40 dark:hover:border-white/25 dark:hover:text-white/70"
+								}`}
+							>
+								<span
+									className="h-1.5 w-5 rounded-full"
+									style={{ backgroundColor: series.colorA, opacity: isActive ? 1 : 0.35 }}
+								/>
+								<span
+									className="h-1.5 w-5 rounded-full"
+									style={{
+										backgroundImage: `repeating-linear-gradient(90deg, ${series.colorB} 0 6px, transparent 6px 10px)`,
+										opacity: isActive ? 1 : 0.35,
+									}}
+								/>
+								{series.label}
+							</button>
+						);
+					})}
 					<span className="hidden text-[10px] uppercase tracking-[0.2em] text-slate-400 dark:text-white/40 md:inline">
 						Scroll to zoom • Double-click to reset
 					</span>
@@ -138,7 +185,7 @@ const CompareOverlayGraph = ({ view, dataA = [], dataB = [], stretch = false }) 
 						const { min: minY, max: maxY } = getYDomain(
 							indexedDataA,
 							indexedDataB,
-							config.series
+							seriesToRender
 						);
 
 						const fullDomain = { start: 0, end: safeMax };
@@ -250,7 +297,7 @@ const CompareOverlayGraph = ({ view, dataA = [], dataB = [], stretch = false }) 
 										/>
 
 										<Group clipPath={`url(#${view}-compare-clip)`}>
-											{config.series.map((series) => (
+											{seriesToRender.map((series) => (
 												<LinePath
 													key={`a-${series.key}`}
 													data={indexedDataA}
@@ -266,7 +313,7 @@ const CompareOverlayGraph = ({ view, dataA = [], dataB = [], stretch = false }) 
 													}}
 												/>
 											))}
-											{config.series.map((series) => (
+											{seriesToRender.map((series) => (
 												<LinePath
 													key={`b-${series.key}`}
 													data={indexedDataB}
@@ -296,7 +343,7 @@ const CompareOverlayGraph = ({ view, dataA = [], dataB = [], stretch = false }) 
 											)}
 
 											{tooltip &&
-												config.series.map((series) => {
+												seriesToRender.map((series) => {
 													const aValue = tooltip.pointA?.[series.key];
 													const bValue = tooltip.pointB?.[series.key];
 													return (
@@ -355,7 +402,7 @@ const CompareOverlayGraph = ({ view, dataA = [], dataB = [], stretch = false }) 
 										<div className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/50">
 											Sample #{tooltip.index + 1}
 										</div>
-										{config.series.map((series) => (
+										{seriesToRender.map((series) => (
 											<div
 												key={`tooltip-${series.key}`}
 												className="flex items-center gap-2"

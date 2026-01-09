@@ -1,10 +1,10 @@
-# Smart Physics Ball Dashboard
+# Smart Physics Car Dashboard
 
-A real-time physics dashboard for my final summative physics class project. It connects to the Smart Physics Ball and streams IMU data over WebSockets.
+A real-time physics dashboard for my final summative physics class project. It connects to the Smart Physics Car and streams IMU data over WebSockets.
 
 ## What it does
 - Live IMU charts (acceleration, rotation, velocity, impact)
-- Orientation view (3D cube)
+- Orientation view (3D chassis)
 - Snapshot and CSV export
 - Compare two throws
 - Peak detection with alert
