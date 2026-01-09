@@ -6,7 +6,7 @@ A real-time physics dashboard for my final summative physics class project. It c
 - Live IMU charts (acceleration, rotation, velocity, impact)
 - Orientation view (3D chassis)
 - Snapshot and CSV export
-- Compare two throws
+- Data tables with copy-to-spreadsheet CSV
 - Peak detection with alert
 - Debug mode with realistic simulated data
 

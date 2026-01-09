@@ -1,21 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import {
-  Camera,
-  Download,
-  GitCompareArrows,
-  Pause,
-  Play,
-  RefreshCcw,
-  Timer,
-  Trash2,
-} from "lucide-react";
+import { Camera, Download, Pause, Play, RefreshCcw, Table, Timer, Trash2 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import TabSwitcher from "../components/TabSwitcher";
 import GlassPanel from "../components/GlassPanel";
 import LiveGraph from "../components/LiveGraph";
-import CompareOverlayGraph from "../components/CompareOverlayGraph";
 import SnapshotModal from "../components/SnapshotModal";
+import DataTableModal from "../components/DataTableModal";
 import ImpactDetector from "../components/ImpactDetector";
 import { useLiveIMUData } from "../hooks/useLiveIMUData";
 import { exportHistoryToCSV } from "../utils/csvExporter";
@@ -31,16 +22,13 @@ const Dashboard = ({ view }) => {
     error,
     clearHistory,
     snapshot,
-    compareMode,
-    setCompareMode,
   } = useLiveIMUData();
 
   const [windowSeconds, setWindowSeconds] = useState(30);
   const [paused, setPaused] = useState(false);
   const [snapshotData, setSnapshotData] = useState([]);
   const [snapshotOpen, setSnapshotOpen] = useState(false);
-  const [compareSets, setCompareSets] = useState({ first: null, second: null });
-  const [compareStage, setCompareStage] = useState(0);
+  const [tableOpen, setTableOpen] = useState(false);
   const [theme, setTheme] = useState(() => {
     if (typeof window === "undefined") return "dark";
     const stored = window.localStorage.getItem("theme");
@@ -82,37 +70,9 @@ const Dashboard = ({ view }) => {
     const cutoff = latest.timestamp - windowSeconds * 1000;
     const windowSnap = snap.filter((point) => point.timestamp >= cutoff);
 
-    if (compareMode) {
-      if (compareStage === 1) {
-        setCompareSets((prev) => ({ ...prev, first: windowSnap }));
-        setCompareStage(2);
-      } else if (compareStage === 2) {
-        setCompareSets((prev) => ({ ...prev, second: windowSnap }));
-        setCompareStage(3);
-      } else {
-        setCompareSets({ first: windowSnap, second: null });
-        setCompareStage(2);
-      }
-      return;
-    }
-
     setSnapshotData(windowSnap);
     setSnapshotOpen(true);
   };
-
-  const handleCompareToggle = () => {
-    setCompareMode(!compareMode);
-    if (!compareMode) {
-      setCompareSets({ first: null, second: null });
-      setCompareStage(1);
-    } else {
-      setCompareSets({ first: null, second: null });
-      setCompareStage(0);
-    }
-  };
-
-  const compareReady = compareSets.first && compareSets.second;
-  const isOrientation = view === "orientation";
 
   const stats = [
     { label: "ax", value: latestPoint.ax },
@@ -141,31 +101,15 @@ const Dashboard = ({ view }) => {
           >
             <GlassPanel className="flex h-full flex-col p-4 sm:p-6">
               <div className="flex-1">
-                {compareMode && compareReady && !isOrientation ? (
-                  <CompareOverlayGraph
-                    view={view}
-                    dataA={compareSets.first}
-                    dataB={compareSets.second}
-                    stretch
-                  />
-                ) : (
-                  <LiveGraph
-                    history={history}
-                    data={data}
-                    view={view}
-                    windowSeconds={windowSeconds}
-                    paused={paused}
-                    stretch
-                  />
-                )}
+                <LiveGraph
+                  history={history}
+                  data={data}
+                  view={view}
+                  windowSeconds={windowSeconds}
+                  paused={paused}
+                  stretch
+                />
               </div>
-              {compareMode && !compareReady && !isOrientation && (
-                <div className="mt-4 rounded-2xl border border-dashed border-black/10 bg-white/5 px-4 py-3 text-sm text-slate-600 dark:border-white/20 dark:text-white/70">
-                  {compareStage === 1 && "Capture throw 1 using Snapshot."}
-                  {compareStage === 2 && "Capture throw 2 using Snapshot."}
-                  {compareStage === 3 && "Comparison ready. Toggle compare to reset."}
-                </div>
-              )}
             </GlassPanel>
           </motion.div>
 
@@ -205,23 +149,18 @@ const Dashboard = ({ view }) => {
               >
                 <span className="flex items-center gap-2">
                   <Camera className="h-4 w-4" />
-                  {compareMode ? "Capture Throw" : "Snapshot"}
+                  Snapshot
                 </span>
               </button>
 
               <button
-                className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-sm ${
-                  compareMode
-                    ? "border-neon-cyan/40 bg-neon-cyan/10 text-slate-900 dark:text-white"
-                    : "border-black/10 bg-white/10 text-slate-700 dark:border-white/10 dark:text-white/80"
-                }`}
-                onClick={handleCompareToggle}
+                className="flex items-center justify-between rounded-2xl border border-black/10 bg-white/10 px-4 py-3 text-sm text-slate-700 dark:border-white/10 dark:text-white/80"
+                onClick={() => setTableOpen(true)}
               >
                 <span className="flex items-center gap-2">
-                  <GitCompareArrows className="h-4 w-4" />
-                  Compare Throws
+                  <Table className="h-4 w-4" />
+                  Data Tables
                 </span>
-                <span className="text-xs text-slate-500 dark:text-white/60">{compareMode ? "On" : "Off"}</span>
               </button>
 
               <button
@@ -304,6 +243,13 @@ const Dashboard = ({ view }) => {
         onClose={() => setSnapshotOpen(false)}
         snapshotData={snapshotData}
         view={view}
+        windowSeconds={windowSeconds}
+      />
+      <DataTableModal
+        isOpen={tableOpen}
+        onClose={() => setTableOpen(false)}
+        history={history}
+        windowedHistory={windowedHistory}
         windowSeconds={windowSeconds}
       />
     </div>
