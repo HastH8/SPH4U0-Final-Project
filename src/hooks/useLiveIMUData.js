@@ -22,16 +22,19 @@ export const useLiveIMUData = () => {
   const [history, setHistory] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState(null);
-  const [compareMode, setCompareMode] = useState(false);
 
   const historyRef = useRef([]);
   const reconnectRef = useRef(null);
+  const bufferRef = useRef([]);
+  const flushTimerRef = useRef(null);
 
-  const pushData = useCallback((packet) => {
-    const formatted = formatPacket(packet);
-    setData(formatted);
+  const pushDataBatch = useCallback((packets) => {
+    if (!packets.length) return;
+    const formatted = packets.map(formatPacket);
+    const latest = formatted[formatted.length - 1];
+    setData(latest);
     setHistory((prev) => {
-      const next = [...prev, formatted];
+      const next = [...prev, ...formatted];
       if (next.length > CONFIG.MAX_HISTORY) {
         next.splice(0, next.length - CONFIG.MAX_HISTORY);
       }
@@ -59,7 +62,7 @@ export const useLiveIMUData = () => {
       setError(null);
 
       const interval = setInterval(() => {
-        pushData(generator());
+        pushDataBatch([generator()]);
       }, 1000 / CONFIG.SAMPLE_RATE_HZ);
 
       return () => {
@@ -67,6 +70,18 @@ export const useLiveIMUData = () => {
         setIsConnected(false);
       };
     }
+
+    const startFlushLoop = () => {
+      if (flushTimerRef.current) {
+        clearInterval(flushTimerRef.current);
+      }
+      flushTimerRef.current = setInterval(() => {
+        if (!bufferRef.current.length) return;
+        const batch = bufferRef.current;
+        bufferRef.current = [];
+        pushDataBatch(batch);
+      }, 1000 / CONFIG.SAMPLE_RATE_HZ);
+    };
 
     const connect = () => {
       if (stopped) {
@@ -78,12 +93,13 @@ export const useLiveIMUData = () => {
       ws.onopen = () => {
         setIsConnected(true);
         setError(null);
+        startFlushLoop();
       };
 
       ws.onmessage = (event) => {
         try {
           const packet = JSON.parse(event.data);
-          pushData(packet);
+          bufferRef.current.push(packet);
         } catch (err) {
           setError("Invalid sensor packet");
         }
@@ -108,11 +124,15 @@ export const useLiveIMUData = () => {
       if (reconnectRef.current) {
         clearTimeout(reconnectRef.current);
       }
+      if (flushTimerRef.current) {
+        clearInterval(flushTimerRef.current);
+        flushTimerRef.current = null;
+      }
       if (ws?.readyState === WebSocket.OPEN || ws?.readyState === WebSocket.CONNECTING) {
         ws.close();
       }
     };
-  }, [pushData]);
+  }, [pushDataBatch]);
 
   return useMemo(
     () => ({
@@ -122,9 +142,7 @@ export const useLiveIMUData = () => {
       error,
       clearHistory,
       snapshot,
-      compareMode,
-      setCompareMode,
     }),
-    [data, history, isConnected, error, clearHistory, snapshot, compareMode, setCompareMode]
+    [data, history, isConnected, error, clearHistory, snapshot]
   );
 };

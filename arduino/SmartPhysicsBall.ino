@@ -525,6 +525,7 @@ void setup() {
     webSocket.beginSSL(WS_HOST, WS_PORT, WS_PATH);
     webSocket.onEvent(websocketEvent);
     webSocket.setReconnectInterval(2000);
+    webSocket.enableHeartbeat(15000, 4000, 2);
   }
   randomSeed(analogRead(A0));
 }
@@ -551,6 +552,7 @@ void loop() {
     if (connectWiFi()) {
       webSocket.disconnect();
       webSocket.beginSSL(WS_HOST, WS_PORT, WS_PATH);
+      webSocket.enableHeartbeat(15000, 4000, 2);
     }
   }
 
