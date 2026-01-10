@@ -481,14 +481,14 @@ const LiveGraph = ({ history, data, view, windowSeconds, paused, stretch = false
 
 		const rotation = hasOrientation
 			? [
-					clamp(applyDeadzone(toRadians(data.pitch), 0.01), -Math.PI, Math.PI),
+					clamp(applyDeadzone(toRadians(data.roll), 0.01), -Math.PI, Math.PI),
 					clamp(applyDeadzone(toRadians(data.yaw), 0.01), -Math.PI, Math.PI),
-					-clamp(applyDeadzone(toRadians(data.roll), 0.01), -Math.PI, Math.PI),
+					-clamp(applyDeadzone(toRadians(data.pitch), 0.01), -Math.PI, Math.PI),
 			  ]
 			: [
-					clamp(applyDeadzone((data?.gx ?? 0) * 0.24), -0.7, 0.7),
+					clamp(applyDeadzone((data?.gy ?? 0) * 0.24), -0.7, 0.7),
 					clamp(applyDeadzone((data?.gz ?? 0) * 0.18), -0.9, 0.9),
-					-clamp(applyDeadzone((data?.gy ?? 0) * 0.24), -0.7, 0.7),
+					-clamp(applyDeadzone((data?.gx ?? 0) * 0.24), -0.7, 0.7),
 			  ];
 
 		return (
