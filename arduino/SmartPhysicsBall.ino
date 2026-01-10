@@ -8,11 +8,11 @@
 // CONFIGURATION
 // =========================
 #define DEBUG_MODE false
-#define IMPACT_THRESHOLD 8.0f
-#define IMPACT_JERK_THRESHOLD 20.0f
+#define IMPACT_THRESHOLD 2.5f
+#define IMPACT_JERK_THRESHOLD 120.0f
 #define IMPACT_HOLD_MS 220
 #define IMPACT_BASELINE_ALPHA 0.06f
-#define STREAM_RATE_MS 5
+#define STREAM_RATE_MS 10
 #define CALIBRATION_TIME_MS 2000
 #define SMOOTHING_ALPHA 0.25f
 #define GYRO_SMOOTHING_ALPHA 0.2f
@@ -20,7 +20,7 @@
 #define VERBOSE_LOG true
 #define WIFI_CONNECT_TIMEOUT_MS 15000
 #define WIFI_STATUS_LOG_INTERVAL_MS 1000
-#define WIFI_SCAN_ON_FAIL true
+#define WIFI_SCAN_ON_FAIL false
 
 // =========================
 // WIFI SETTINGS
@@ -674,7 +674,9 @@ void loop() {
 
   float impactForce = impactDetected ? impactPeak : 0.0f;
 
-  StaticJsonDocument<256> doc;
+  Vec3 eulerDeg = eulerFromQuat();
+
+  StaticJsonDocument<384> doc;
   doc["accel"]["x"] = accelSmooth.x;
   doc["accel"]["y"] = accelSmooth.y;
   doc["accel"]["z"] = accelSmooth.z;
@@ -684,6 +686,9 @@ void loop() {
   doc["velocity"] = velocity;
   doc["impact"] = impactForce;
   doc["impactDetected"] = impactDetected;
+  doc["orientation"]["roll"] = eulerDeg.x;
+  doc["orientation"]["pitch"] = eulerDeg.y;
+  doc["orientation"]["yaw"] = eulerDeg.z;
   doc["timestamp"] = millis();
 
   char buffer[256];
@@ -701,7 +706,6 @@ void loop() {
     logVec("Accel smooth", accelSmooth);
     logVec("Gyro smooth", gyroSmooth);
     logQuat("Quaternion", q0, q1, q2, q3);
-    Vec3 eulerDeg = eulerFromQuat();
     logVec("Euler deg", eulerDeg);
     Serial.print("Velocity vec: ");
     Serial.print(velocityVec.x, 4);

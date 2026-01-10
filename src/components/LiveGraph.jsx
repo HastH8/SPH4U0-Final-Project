@@ -473,10 +473,23 @@ const LiveGraph = ({ history, data, view, windowSeconds, paused, stretch = false
 	if (view === "orientation") {
 		const applyDeadzone = (value, zone = 0.03) =>
 			Math.abs(value) < zone ? 0 : value;
-		const pitch = clamp(applyDeadzone((data?.gx ?? 0) * 0.24), -0.45, 0.45);
-		const roll = clamp(applyDeadzone((data?.gy ?? 0) * 0.24), -0.45, 0.45);
-		const yaw = clamp(applyDeadzone((data?.gz ?? 0) * 0.18), -0.55, 0.55);
-		const rotation = [pitch, yaw, -roll];
+		const toRadians = (value) => (value * Math.PI) / 180;
+		const hasOrientation =
+			Number.isFinite(data?.roll) &&
+			Number.isFinite(data?.pitch) &&
+			Number.isFinite(data?.yaw);
+
+		const rotation = hasOrientation
+			? [
+					clamp(applyDeadzone(toRadians(data.pitch), 0.01), -Math.PI, Math.PI),
+					clamp(applyDeadzone(toRadians(data.yaw), 0.01), -Math.PI, Math.PI),
+					-clamp(applyDeadzone(toRadians(data.roll), 0.01), -Math.PI, Math.PI),
+			  ]
+			: [
+					clamp(applyDeadzone((data?.gx ?? 0) * 0.24), -0.7, 0.7),
+					clamp(applyDeadzone((data?.gz ?? 0) * 0.18), -0.9, 0.9),
+					-clamp(applyDeadzone((data?.gy ?? 0) * 0.24), -0.7, 0.7),
+			  ];
 
 		return (
 			<div

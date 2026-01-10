@@ -163,6 +163,11 @@ export const createFakeIMUGenerator = (sampleRate = 30) => {
       gyro,
       velocity,
       impact,
+      orientation: {
+        roll: (roll * 180) / Math.PI,
+        pitch: (pitch * 180) / Math.PI,
+        yaw: (yaw * 180) / Math.PI,
+      },
       timestamp: Date.now(),
     };
   };

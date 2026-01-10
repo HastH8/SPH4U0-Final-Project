@@ -16,6 +16,7 @@ import GlassPanel from "../components/GlassPanel";
 import LiveGraph from "../components/LiveGraph";
 import SnapshotModal from "../components/SnapshotModal";
 import DataTableModal from "../components/DataTableModal";
+import SettingsModal from "../components/SettingsModal";
 import ImpactDetector from "../components/ImpactDetector";
 import { useLiveIMUData } from "../hooks/useLiveIMUData";
 import { exportHistoryToCSV } from "../utils/csvExporter";
@@ -24,14 +25,25 @@ import { CONFIG } from "../config";
 const TIME_WINDOWS = [10, 30, 60];
 
 const Dashboard = ({ view }) => {
+	const [renderRateHz, setRenderRateHz] = useState(() => {
+		if (typeof window === "undefined") return CONFIG.SAMPLE_RATE_HZ;
+		const stored = Number(window.localStorage.getItem("renderRateHz"));
+		return Number.isFinite(stored) ? stored : CONFIG.SAMPLE_RATE_HZ;
+	});
+	const [smoothingFactor, setSmoothingFactor] = useState(() => {
+		if (typeof window === "undefined") return CONFIG.SMOOTHING_FACTOR;
+		const stored = Number(window.localStorage.getItem("smoothingFactor"));
+		return Number.isFinite(stored) ? stored : CONFIG.SMOOTHING_FACTOR;
+	});
 	const { data, history, isConnected, error, clearHistory, snapshot } =
-		useLiveIMUData();
+		useLiveIMUData({ sampleRateHz: renderRateHz, smoothingFactor });
 
 	const [windowSeconds, setWindowSeconds] = useState(30);
 	const [paused, setPaused] = useState(false);
 	const [snapshotData, setSnapshotData] = useState([]);
 	const [snapshotOpen, setSnapshotOpen] = useState(false);
 	const [tableOpen, setTableOpen] = useState(false);
+	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [theme, setTheme] = useState(() => {
 		if (typeof window === "undefined") return "dark";
 		const stored = window.localStorage.getItem("theme");
@@ -62,8 +74,23 @@ const Dashboard = ({ view }) => {
 		window.localStorage.setItem("theme", theme);
 	}, [theme]);
 
+	useEffect(() => {
+		if (typeof window === "undefined") return;
+		window.localStorage.setItem("renderRateHz", String(renderRateHz));
+	}, [renderRateHz]);
+
+	useEffect(() => {
+		if (typeof window === "undefined") return;
+		window.localStorage.setItem("smoothingFactor", String(smoothingFactor));
+	}, [smoothingFactor]);
+
 	const handleToggleTheme = () => {
 		setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+	};
+
+	const handleResetSettings = () => {
+		setRenderRateHz(CONFIG.SAMPLE_RATE_HZ);
+		setSmoothingFactor(CONFIG.SMOOTHING_FACTOR);
 	};
 
 	const handleSnapshot = () => {
@@ -94,6 +121,7 @@ const Dashboard = ({ view }) => {
 				isConnected={isConnected}
 				theme={theme}
 				onToggleTheme={handleToggleTheme}
+				onOpenSettings={() => setSettingsOpen(true)}
 			/>
 
 			<div className="px-4 pb-12 pt-4 sm:px-6 sm:pt-6">
@@ -270,6 +298,15 @@ const Dashboard = ({ view }) => {
 				history={history}
 				windowedHistory={windowedHistory}
 				windowSeconds={windowSeconds}
+			/>
+			<SettingsModal
+				isOpen={settingsOpen}
+				onClose={() => setSettingsOpen(false)}
+				sampleRateHz={renderRateHz}
+				smoothingFactor={smoothingFactor}
+				onSampleRateChange={setRenderRateHz}
+				onSmoothingFactorChange={setSmoothingFactor}
+				onReset={handleResetSettings}
 			/>
 		</div>
 	);
