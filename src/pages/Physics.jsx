@@ -9,6 +9,44 @@ import { useLiveIMUData } from "../hooks/useLiveIMUData";
 import { CONFIG } from "../config";
 
 const TIME_WINDOWS = [10, 30, 60];
+const FORMULA_SECTIONS = [
+  {
+    title: "Kinematics",
+    items: [
+      "v = delta d / delta t",
+      "a = delta v / delta t",
+      "d = 0.5 * (vi + vf) * t",
+      "d = vi * t + 0.5 * a * t^2",
+      "vf^2 = vi^2 + 2 * a * d",
+    ],
+  },
+  {
+    title: "Forces",
+    items: ["F = m * a", "Ff = mu * Fn", "Fn = m * g"],
+  },
+  {
+    title: "Momentum & Impulse",
+    items: ["p = m * v", "J = F * delta t", "J = delta p"],
+  },
+  {
+    title: "Energy & Power",
+    items: [
+      "Ek = 0.5 * m * v^2",
+      "Ep = m * g * h",
+      "W = F * d",
+      "W = delta E",
+      "P = W / t",
+    ],
+  },
+  {
+    title: "Circular Motion",
+    items: ["v = w * r", "ac = v^2 / r", "ac = w^2 * r", "Fc = m * ac"],
+  },
+  {
+    title: "Rotation",
+    items: ["w = delta theta / delta t", "alpha = delta w / delta t"],
+  },
+];
 
 const formatValue = (value, decimals = 2) => {
   if (!Number.isFinite(value)) return "--";
@@ -226,7 +264,7 @@ const Physics = () => {
                   Physics Calculations
                 </p>
                 <p className="text-xs text-slate-500 dark:text-white/50">
-                  Mass: {massKg} kg · Wheel radius: {wheelRadiusM} m
+                  Mass: {massKg} kg - Wheel radius: {wheelRadiusM} m
                 </p>
               </div>
               <div className="rounded-2xl border border-black/10 bg-white/10 px-4 py-3 text-sm text-slate-700 dark:border-white/10 dark:text-white/80">
@@ -269,13 +307,13 @@ const Physics = () => {
                       label="Distance"
                       value={formatValue(metrics.distance, 2)}
                       unit="m"
-                      formula="s = ∫ v dt"
+                      formula="s = integral(v dt)"
                     />
                     <MetricCard
                       label="Average Speed"
                       value={formatValue(metrics.avgSpeed, 2)}
                       unit="m/s"
-                      formula="v̄ = Δs / Δt"
+                      formula="v_avg = delta s / delta t"
                     />
                     <MetricCard
                       label="Max Speed"
@@ -286,13 +324,13 @@ const Physics = () => {
                     <MetricCard
                       label="Average Accel"
                       value={formatValue(metrics.avgAccel, 2)}
-                      unit="m/s²"
-                      formula="ā = Σ|a|/n"
+                      unit="m/s^2"
+                      formula="a_avg = sum(|a|) / n"
                     />
                     <MetricCard
                       label="Max Accel"
                       value={formatValue(metrics.maxAccel, 2)}
-                      unit="m/s²"
+                      unit="m/s^2"
                       formula="amax"
                     />
                     <MetricCard
@@ -318,26 +356,26 @@ const Physics = () => {
                     <MetricCard
                       label="Momentum"
                       value={formatValue(metrics.momentum, 2)}
-                      unit="kg·m/s"
+                      unit="kg*m/s"
                       formula="p = m v"
                     />
                     <MetricCard
                       label="Kinetic Energy"
                       value={formatValue(metrics.kineticEnergy, 2)}
                       unit="J"
-                      formula="Ek = 1/2 m v²"
+                      formula="Ek = 0.5 * m * v^2"
                     />
                     <MetricCard
-                      label="Work (ΔEk)"
+                      label="Work (delta Ek)"
                       value={formatValue(metrics.work, 2)}
                       unit="J"
-                      formula="W = ΔEk"
+                      formula="W = delta Ek"
                     />
                     <MetricCard
                       label="Average Power"
                       value={formatValue(metrics.avgPower, 2)}
                       unit="W"
-                      formula="P = W/Δt"
+                      formula="P = W / delta t"
                     />
                   </div>
                 </div>
@@ -351,25 +389,25 @@ const Physics = () => {
                       label="Yaw Rate"
                       value={formatValue(metrics.yawRate, 3)}
                       unit="rad/s"
-                      formula="ωz"
+                      formula="wz"
                     />
                     <MetricCard
                       label="Turn Radius"
                       value={metrics.turnRadius ? formatValue(metrics.turnRadius, 2) : "--"}
                       unit="m"
-                      formula="r = v / ω"
+                      formula="r = v / w"
                     />
                     <MetricCard
                       label="Centripetal Accel"
                       value={metrics.centripetalAccel ? formatValue(metrics.centripetalAccel, 2) : "--"}
-                      unit="m/s²"
-                      formula="ac = vω"
+                      unit="m/s^2"
+                      formula="ac = v * w"
                     />
                     <MetricCard
                       label="Wheel RPM"
                       value={metrics.wheelRpm ? formatValue(metrics.wheelRpm, 1) : "--"}
                       unit="rpm"
-                      formula="rpm = v / (2πr)"
+                      formula="rpm = v / (2 * pi * r)"
                     />
                   </div>
                 </div>
@@ -382,7 +420,7 @@ const Physics = () => {
                     <MetricCard
                       label="Impact Peak Accel"
                       value={impactSummary ? formatValue(impactSummary.peakImpact, 2) : "--"}
-                      unit="m/s²"
+                      unit="m/s^2"
                       formula="amax during impact"
                     />
                     <MetricCard
@@ -394,20 +432,20 @@ const Physics = () => {
                     <MetricCard
                       label="Impulse"
                       value={impactSummary ? formatValue(impactSummary.impulse, 3) : "--"}
-                      unit="N·s"
-                      formula="J = ∫ F dt"
+                      unit="N*s"
+                      formula="J = integral(F dt)"
                     />
                     <MetricCard
-                      label="Δv (impact)"
+                      label="delta v (impact)"
                       value={impactSummary ? formatValue(impactSummary.deltaV, 3) : "--"}
                       unit="m/s"
-                      formula="Δv = v2 - v1"
+                      formula="delta v = v2 - v1"
                     />
                     <MetricCard
                       label="Impact Duration"
                       value={impactSummary ? formatValue(impactSummary.durationMs, 0) : "--"}
                       unit="ms"
-                      formula="Δt"
+                      formula="delta t"
                     />
                   </div>
                 </div>
@@ -421,6 +459,29 @@ const Physics = () => {
             )}
           </GlassPanel>
         </motion.div>
+
+        <GlassPanel className="mt-6 p-6">
+          <div className="mb-5 text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-white/50">
+            Formula Reference (Grade 12)
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {FORMULA_SECTIONS.map((section) => (
+              <div
+                key={section.title}
+                className="rounded-2xl border border-black/10 bg-white/5 p-4 dark:border-white/10"
+              >
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-white/50">
+                  {section.title}
+                </p>
+                <ul className="mt-3 space-y-1 text-xs text-slate-600 dark:text-white/70">
+                  {section.items.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </GlassPanel>
 
         <GlassPanel className="mt-6 px-5 py-4">
           <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-white/50">
