@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Activity, Car, Gauge, Rotate3d, Zap } from "lucide-react";
+import { Activity, Car, Gauge, Rotate3d, Sigma, Zap } from "lucide-react";
 import GlassPanel from "./GlassPanel";
 
 const tabs = [
@@ -8,6 +8,7 @@ const tabs = [
   { label: "Velocity", path: "/velocity", icon: Gauge },
   { label: "Impact", path: "/impact", icon: Zap },
   { label: "Chassis", path: "/orientation", icon: Car },
+  { label: "Physics", path: "/physics", icon: Sigma },
 ];
 
 const TabSwitcher = () => {
