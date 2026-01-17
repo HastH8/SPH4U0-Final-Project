@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { BlockMath } from "react-katex";
+import "katex/dist/katex.min.css";
 import { Orbit, Timer } from "lucide-react";
 import Navbar from "../components/Navbar";
 import TabSwitcher from "../components/TabSwitcher";
@@ -13,38 +15,38 @@ const FORMULA_SECTIONS = [
   {
     title: "Kinematics",
     items: [
-      "v = delta d / delta t",
-      "a = delta v / delta t",
-      "d = 0.5 * (vi + vf) * t",
-      "d = vi * t + 0.5 * a * t^2",
-      "vf^2 = vi^2 + 2 * a * d",
+      "v = \\frac{\\Delta d}{\\Delta t}",
+      "a = \\frac{\\Delta v}{\\Delta t}",
+      "d = \\tfrac{1}{2}(v_i + v_f)t",
+      "d = v_i t + \\tfrac{1}{2} a t^2",
+      "v_f^2 = v_i^2 + 2 a d",
     ],
   },
   {
     title: "Forces",
-    items: ["F = m * a", "Ff = mu * Fn", "Fn = m * g"],
+    items: ["F = m a", "F_f = \\mu F_N", "F_N = m g"],
   },
   {
     title: "Momentum & Impulse",
-    items: ["p = m * v", "J = F * delta t", "J = delta p"],
+    items: ["p = m v", "J = F\\Delta t", "J = \\Delta p"],
   },
   {
     title: "Energy & Power",
     items: [
-      "Ek = 0.5 * m * v^2",
-      "Ep = m * g * h",
-      "W = F * d",
-      "W = delta E",
-      "P = W / t",
+      "E_k = \\tfrac{1}{2} m v^2",
+      "E_p = m g h",
+      "W = F d",
+      "W = \\Delta E",
+      "P = \\frac{W}{t}",
     ],
   },
   {
     title: "Circular Motion",
-    items: ["v = w * r", "ac = v^2 / r", "ac = w^2 * r", "Fc = m * ac"],
+    items: ["v = \\omega r", "a_c = \\frac{v^2}{r}", "a_c = \\omega^2 r", "F_c = m a_c"],
   },
   {
     title: "Rotation",
-    items: ["w = delta theta / delta t", "alpha = delta w / delta t"],
+    items: ["\\omega = \\frac{\\Delta \\theta}{\\Delta t}", "\\alpha = \\frac{\\Delta \\omega}{\\Delta t}"],
   },
 ];
 
@@ -493,9 +495,9 @@ const Physics = () => {
                   {section.items.map((item) => (
                     <div
                       key={item}
-                      className="rounded-xl border border-black/10 bg-white/10 px-3 py-2 text-xs font-semibold text-slate-700 shadow-soft/40 dark:border-white/10 dark:bg-white/5 dark:text-white/70"
+                      className="rounded-xl border border-black/10 bg-white/10 px-3 py-2 text-slate-700 shadow-soft/40 dark:border-white/10 dark:bg-white/5 dark:text-white/70"
                     >
-                      <span className="font-mono text-[11px] tracking-wide">{item}</span>
+                      <BlockMath math={item} />
                     </div>
                   ))}
                 </div>
