@@ -29,6 +29,7 @@ export const useLiveIMUData = ({
   const [history, setHistory] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState(null);
+  const [lastPacketAt, setLastPacketAt] = useState(null);
 
   const historyRef = useRef([]);
   const reconnectRef = useRef(null);
@@ -78,6 +79,7 @@ export const useLiveIMUData = ({
     const smoothed = formatted.map(applySmoothing);
     const latest = smoothed[smoothed.length - 1];
     setData(latest);
+    setLastPacketAt(Date.now());
     setHistory((prev) => {
       const next = [...prev, ...smoothed];
       if (next.length > CONFIG.MAX_HISTORY) {
@@ -105,6 +107,7 @@ export const useLiveIMUData = ({
     historyRef.current = [];
     smoothingRef.current = null;
     setHistory([]);
+    setLastPacketAt(null);
   }, []);
 
   const snapshot = useCallback(() => {
@@ -204,9 +207,10 @@ export const useLiveIMUData = ({
       history,
       isConnected,
       error,
+      lastPacketAt,
       clearHistory,
       snapshot,
     }),
-    [data, history, isConnected, error, clearHistory, snapshot]
+    [data, history, isConnected, error, lastPacketAt, clearHistory, snapshot]
   );
 };

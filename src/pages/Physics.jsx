@@ -103,7 +103,10 @@ const findImpactWindow = (points, threshold, massKg) => {
 };
 
 const MetricCard = ({ label, value, unit, formula }) => (
-  <div className="rounded-2xl border border-black/10 bg-white/5 p-4 dark:border-white/10">
+  <motion.div
+    whileHover={{ y: -4 }}
+    className="rounded-2xl border border-black/10 bg-white/5 p-4 shadow-soft/30 transition dark:border-white/10"
+  >
     <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-white/50">
       {label}
     </p>
@@ -113,7 +116,7 @@ const MetricCard = ({ label, value, unit, formula }) => (
     {formula && (
       <p className="mt-2 text-[11px] text-slate-500 dark:text-white/40">{formula}</p>
     )}
-  </div>
+  </motion.div>
 );
 
 const Physics = () => {
@@ -127,13 +130,14 @@ const Physics = () => {
     const stored = Number(window.localStorage.getItem("smoothingFactor"));
     return Number.isFinite(stored) ? stored : CONFIG.SMOOTHING_FACTOR;
   });
-  const { data, history, isConnected, error } = useLiveIMUData({
+  const { data, history, isConnected, error, lastPacketAt } = useLiveIMUData({
     sampleRateHz: renderRateHz,
     smoothingFactor,
   });
 
   const [windowSeconds, setWindowSeconds] = useState(30);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [now, setNow] = useState(Date.now());
   const [theme, setTheme] = useState(() => {
     if (typeof window === "undefined") return "dark";
     const stored = window.localStorage.getItem("theme");
@@ -148,6 +152,11 @@ const Physics = () => {
     document.documentElement.classList.toggle("dark", theme === "dark");
     window.localStorage.setItem("theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -238,11 +247,15 @@ const Physics = () => {
   };
 
   const impactSummary = metrics?.impact;
+  const isStreaming = Boolean(
+    isConnected && lastPacketAt && now - lastPacketAt < 2000
+  );
 
   return (
     <div className="min-h-screen text-slate-900 dark:text-white">
       <Navbar
         isConnected={isConnected}
+        isStreaming={isStreaming}
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onOpenSettings={() => setSettingsOpen(true)}
@@ -465,20 +478,28 @@ const Physics = () => {
             Formula Reference (Grade 12)
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            {FORMULA_SECTIONS.map((section) => (
-              <div
+            {FORMULA_SECTIONS.map((section, index) => (
+              <motion.div
                 key={section.title}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: index * 0.05 }}
                 className="rounded-2xl border border-black/10 bg-white/5 p-4 dark:border-white/10"
               >
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-white/50">
                   {section.title}
                 </p>
-                <ul className="mt-3 space-y-1 text-xs text-slate-600 dark:text-white/70">
+                <div className="mt-3 grid gap-2">
                   {section.items.map((item) => (
-                    <li key={item}>{item}</li>
+                    <div
+                      key={item}
+                      className="rounded-xl border border-black/10 bg-white/10 px-3 py-2 text-xs font-semibold text-slate-700 shadow-soft/40 dark:border-white/10 dark:bg-white/5 dark:text-white/70"
+                    >
+                      <span className="font-mono text-[11px] tracking-wide">{item}</span>
+                    </div>
                   ))}
-                </ul>
-              </div>
+                </div>
+              </motion.div>
             ))}
           </div>
         </GlassPanel>

@@ -3,7 +3,7 @@ import { MoonStar, SlidersHorizontal, SunMedium, Waves } from "lucide-react";
 import GlassPanel from "./GlassPanel";
 import StatusIndicator from "./StatusIndicator";
 
-const Navbar = ({ isConnected, theme, onToggleTheme, onOpenSettings }) => {
+const Navbar = ({ isConnected, isStreaming, theme, onToggleTheme, onOpenSettings }) => {
   return (
     <div className="sticky top-0 z-30 px-4 pt-4 sm:px-6 sm:pt-6">
       <GlassPanel className="relative flex flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
@@ -18,7 +18,7 @@ const Navbar = ({ isConnected, theme, onToggleTheme, onOpenSettings }) => {
         </div>
 
         <div className="flex items-center gap-3 sm:gap-4">
-          <StatusIndicator isConnected={isConnected} />
+          <StatusIndicator isConnected={isConnected} isStreaming={isStreaming} />
           <motion.button
             whileTap={{ scale: 0.95 }}
             whileHover={{ scale: 1.05 }}

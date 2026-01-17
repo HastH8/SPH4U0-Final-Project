@@ -21,12 +21,13 @@
 #define WIFI_CONNECT_TIMEOUT_MS 15000
 #define WIFI_STATUS_LOG_INTERVAL_MS 1000
 #define WIFI_SCAN_ON_FAIL false
+#define WS_RECONNECT_INTERVAL_MS 5000
 
 // =========================
 // WIFI SETTINGS
 // =========================
-const char *WIFI_SSID = "iPad";
-const char *WIFI_PASS = "Hast2008";
+const char *WIFI_SSID = "Leo";
+const char *WIFI_PASS = "20062006";
 
 // =========================
 // WEBSOCKET CLIENT (Railway)
@@ -42,6 +43,7 @@ WebSocketsClient webSocket;
 unsigned long lastStream = 0;
 unsigned long lastWiFiCheck = 0;
 unsigned long lastSampleUs = 0;
+unsigned long lastWsReconnect = 0;
 
 const float GRAVITY = 9.80665f;
 
@@ -537,6 +539,19 @@ void loop() {
   webSocket.loop();
 
   unsigned long now = millis();
+
+  if (WiFi.status() == WL_CONNECTED && !webSocket.isConnected()) {
+    if (now - lastWsReconnect >= WS_RECONNECT_INTERVAL_MS) {
+      lastWsReconnect = now;
+      if (VERBOSE_LOG) {
+        Serial.println("WebSocket reconnect attempt...");
+      }
+      webSocket.disconnect();
+      webSocket.beginSSL(WS_HOST, WS_PORT, WS_PATH);
+      webSocket.enableHeartbeat(15000, 4000, 2);
+    }
+  }
+
   if (now - lastStream < STREAM_RATE_MS) {
     return;
   }

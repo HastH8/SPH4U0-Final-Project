@@ -35,7 +35,7 @@ const Dashboard = ({ view }) => {
 		const stored = Number(window.localStorage.getItem("smoothingFactor"));
 		return Number.isFinite(stored) ? stored : CONFIG.SMOOTHING_FACTOR;
 	});
-	const { data, history, isConnected, error, clearHistory, snapshot } =
+	const { data, history, isConnected, error, lastPacketAt, clearHistory, snapshot } =
 		useLiveIMUData({ sampleRateHz: renderRateHz, smoothingFactor });
 
 	const [windowSeconds, setWindowSeconds] = useState(30);
@@ -44,6 +44,7 @@ const Dashboard = ({ view }) => {
 	const [snapshotOpen, setSnapshotOpen] = useState(false);
 	const [tableOpen, setTableOpen] = useState(false);
 	const [settingsOpen, setSettingsOpen] = useState(false);
+	const [now, setNow] = useState(Date.now());
 	const [theme, setTheme] = useState(() => {
 		if (typeof window === "undefined") return "dark";
 		const stored = window.localStorage.getItem("theme");
@@ -73,6 +74,11 @@ const Dashboard = ({ view }) => {
 		document.documentElement.classList.toggle("dark", theme === "dark");
 		window.localStorage.setItem("theme", theme);
 	}, [theme]);
+
+	useEffect(() => {
+		const interval = setInterval(() => setNow(Date.now()), 1000);
+		return () => clearInterval(interval);
+	}, []);
 
 	useEffect(() => {
 		if (typeof window === "undefined") return;
@@ -115,10 +121,15 @@ const Dashboard = ({ view }) => {
 		{ label: "impact", value: latestPoint.impact },
 	];
 
+	const isStreaming = Boolean(
+		isConnected && lastPacketAt && now - lastPacketAt < 2000
+	);
+
 	return (
 		<div className="min-h-screen text-slate-900 dark:text-white">
 			<Navbar
 				isConnected={isConnected}
+				isStreaming={isStreaming}
 				theme={theme}
 				onToggleTheme={handleToggleTheme}
 				onOpenSettings={() => setSettingsOpen(true)}
