@@ -266,7 +266,7 @@ const ChassisModel = ({ rotation }) => {
 	);
 };
 
-const OrientationChassis = ({ rotation, dragMode }) => {
+const OrbitCamera = ({ dragMode }) => {
 	const { camera, gl } = useThree();
 	const orbitRef = useRef({ ...DEFAULT_ORBIT });
 	const dragRef = useRef({ active: false, lastX: 0, lastY: 0 });
@@ -339,8 +339,13 @@ const OrientationChassis = ({ rotation, dragMode }) => {
 		};
 	}, [dragMode, applyOrbit, gl]);
 
+	return null;
+};
+
+const OrientationChassis = ({ rotation, dragMode }) => {
 	return (
 		<Canvas camera={{ position: [0, 2.6, 5.2], fov: 42 }}>
+			<OrbitCamera dragMode={dragMode} />
 			<ambientLight intensity={0.65} />
 			<directionalLight position={[3, 4, 2]} intensity={1.1} />
 			<mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
