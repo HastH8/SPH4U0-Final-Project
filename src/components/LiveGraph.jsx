@@ -116,6 +116,14 @@ const getYDomain = (data, series) => {
 
 const ChassisModel = ({ rotation }) => {
 	const chassisRef = useRef(null);
+	const studXs = [-1.5, -0.75, 0, 0.75, 1.5];
+	const studZs = [-0.45, 0.45];
+	const wheelPositions = [
+		[1.55, -0.25, 0.95],
+		[-1.55, -0.25, 0.95],
+		[1.55, -0.25, -0.95],
+		[-1.55, -0.25, -0.95],
+	];
 
 	useFrame(() => {
 		if (!chassisRef.current) return;
@@ -130,49 +138,89 @@ const ChassisModel = ({ rotation }) => {
 
 	return (
 		<group ref={chassisRef}>
-			<mesh position={[0, 0, 0]}>
-				<boxGeometry args={[3.4, 0.4, 1.7]} />
+			<mesh position={[0, -0.18, 0]}>
+				<boxGeometry args={[3.9, 0.18, 1.7]} />
+				<meshStandardMaterial color="#111827" metalness={0.15} roughness={0.85} />
+			</mesh>
+			<mesh position={[0, 0.05, 0]}>
+				<boxGeometry args={[4.0, 0.4, 1.8]} />
+				<meshStandardMaterial color="#dc2626" metalness={0.25} roughness={0.35} />
+			</mesh>
+
+			<mesh position={[0.95, 0.38, 0]}>
+				<boxGeometry args={[1.55, 0.28, 1.45]} />
+				<meshStandardMaterial color="#ef4444" metalness={0.2} roughness={0.35} />
+			</mesh>
+			<mesh position={[-0.45, 0.58, 0]}>
+				<boxGeometry args={[1.45, 0.65, 1.35]} />
+				<meshStandardMaterial color="#facc15" metalness={0.15} roughness={0.4} />
+			</mesh>
+			<mesh position={[-0.45, 0.95, 0]}>
+				<boxGeometry args={[1.1, 0.22, 1.05]} />
+				<meshStandardMaterial color="#fde68a" metalness={0.1} roughness={0.45} />
+			</mesh>
+			<mesh position={[0.2, 0.7, 0]} rotation={[0, 0, -0.35]}>
+				<boxGeometry args={[0.9, 0.06, 1.1]} />
 				<meshStandardMaterial
-					color="#c7f9ff"
-					emissive="#00f7ff"
-					emissiveIntensity={0.18}
-					metalness={0.55}
-					roughness={0.22}
+					color="#7dd3fc"
+					transparent
+					opacity={0.65}
+					metalness={0.1}
+					roughness={0.2}
 				/>
 			</mesh>
-			<mesh position={[0.3, 0.45, 0.05]}>
-				<boxGeometry args={[1.6, 0.3, 1.1]} />
-				<meshStandardMaterial
-					color="#1e293b"
-					emissive="#38bdf8"
-					emissiveIntensity={0.12}
-					metalness={0.25}
-					roughness={0.5}
-				/>
+
+			<mesh position={[1.98, 0.08, 0]}>
+				<boxGeometry args={[0.16, 0.24, 1.65]} />
+				<meshStandardMaterial color="#111827" metalness={0.2} roughness={0.7} />
 			</mesh>
-			<mesh position={[-1.2, 0.1, 0]}>
-				<boxGeometry args={[0.7, 0.25, 1.4]} />
-				<meshStandardMaterial color="#93c5fd" metalness={0.2} roughness={0.4} />
+			<mesh position={[-1.98, 0.08, 0]}>
+				<boxGeometry args={[0.16, 0.24, 1.65]} />
+				<meshStandardMaterial color="#111827" metalness={0.2} roughness={0.7} />
 			</mesh>
-			<mesh position={[1.65, 0.02, 0]}>
-				<boxGeometry args={[0.3, 0.2, 1.3]} />
-				<meshStandardMaterial color="#0f172a" metalness={0.1} roughness={0.6} />
-			</mesh>
+
+			{studXs.flatMap((x) =>
+				studZs.map((z) => (
+					<mesh key={`stud-${x}-${z}`} position={[x, 0.28, z]}>
+						<cylinderGeometry args={[0.16, 0.16, 0.08, 14]} />
+						<meshStandardMaterial color="#fef3c7" metalness={0.1} roughness={0.6} />
+					</mesh>
+				))
+			)}
+
+			{wheelPositions.map(([x, y, z]) => (
+				<group key={`wheel-${x}-${z}`} position={[x, y, z]} rotation={[0, 0, Math.PI / 2]}>
+					<mesh>
+						<cylinderGeometry args={[0.35, 0.35, 0.26, 24]} />
+						<meshStandardMaterial color="#0b0f1a" metalness={0.2} roughness={0.85} />
+					</mesh>
+					<mesh>
+						<cylinderGeometry args={[0.2, 0.2, 0.28, 20]} />
+						<meshStandardMaterial color="#9ca3af" metalness={0.6} roughness={0.35} />
+					</mesh>
+					<mesh>
+						<cylinderGeometry args={[0.12, 0.12, 0.3, 16]} />
+						<meshStandardMaterial color="#e5e7eb" metalness={0.7} roughness={0.25} />
+					</mesh>
+				</group>
+			))}
+
 			{[
-				[1.25, -0.3, 0.82],
-				[-1.25, -0.3, 0.82],
-				[1.25, -0.3, -0.82],
-				[-1.25, -0.3, -0.82],
-			].map(([x, y, z]) => (
-				<mesh key={`${x}-${z}`} position={[x, y, z]} rotation={[0, 0, Math.PI / 2]}>
-					<cylinderGeometry args={[0.28, 0.28, 0.24, 24]} />
-					<meshStandardMaterial color="#0b0f1a" metalness={0.2} roughness={0.85} />
+				[2.03, 0.16, 0.5, "#fde68a", "#f59e0b"],
+				[2.03, 0.16, -0.5, "#fde68a", "#f59e0b"],
+				[-2.03, 0.16, 0.5, "#f87171", "#ef4444"],
+				[-2.03, 0.16, -0.5, "#f87171", "#ef4444"],
+			].map(([x, y, z, color, emissive]) => (
+				<mesh key={`light-${x}-${z}`} position={[x, y, z]}>
+					<boxGeometry args={[0.08, 0.12, 0.2]} />
+					<meshStandardMaterial
+						color={color}
+						emissive={emissive}
+						emissiveIntensity={0.6}
+						roughness={0.4}
+					/>
 				</mesh>
 			))}
-			<mesh position={[0, 0.52, -0.25]}>
-				<boxGeometry args={[0.25, 0.2, 0.25]} />
-				<meshStandardMaterial color="#22d3ee" emissive="#22d3ee" emissiveIntensity={0.3} />
-			</mesh>
 		</group>
 	);
 };

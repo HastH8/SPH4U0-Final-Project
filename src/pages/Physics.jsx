@@ -203,16 +203,6 @@ const Physics = () => {
     const kineticEnergy = 0.5 * massKg * currentSpeed * currentSpeed;
 
     const work = 0.5 * massKg * (last.velocity * last.velocity - first.velocity * first.velocity);
-    const avgPower = totalTime > 0 ? work / totalTime : 0;
-
-    const yawRate = Number.isFinite(last.gz) ? last.gz : 0;
-    const turnRadius = Math.abs(yawRate) > 0.02 ? currentSpeed / Math.abs(yawRate) : null;
-    const centripetalAccel = Math.abs(yawRate) > 0.02 ? currentSpeed * Math.abs(yawRate) : null;
-
-    const wheelRpm =
-      wheelRadiusM > 0
-        ? (currentSpeed / (2 * Math.PI * wheelRadiusM)) * 60
-        : null;
 
     const impact = findImpactWindow(windowedHistory, CONFIG.IMPACT_THRESHOLD, massKg);
 
@@ -230,11 +220,6 @@ const Physics = () => {
       momentum,
       kineticEnergy,
       work,
-      avgPower,
-      yawRate,
-      turnRadius,
-      centripetalAccel,
-      wheelRpm,
       impact,
     };
   }, [windowedHistory, massKg, wheelRadiusM]);
@@ -385,44 +370,6 @@ const Physics = () => {
                       value={formatValue(metrics.work, 2)}
                       unit="J"
                       formula="W = delta Ek"
-                    />
-                    <MetricCard
-                      label="Average Power"
-                      value={formatValue(metrics.avgPower, 2)}
-                      unit="W"
-                      formula="P = W / delta t"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <p className="mb-3 text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-white/50">
-                    Turning & Rotation
-                  </p>
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <MetricCard
-                      label="Yaw Rate"
-                      value={formatValue(metrics.yawRate, 3)}
-                      unit="rad/s"
-                      formula="wz"
-                    />
-                    <MetricCard
-                      label="Turn Radius"
-                      value={metrics.turnRadius ? formatValue(metrics.turnRadius, 2) : "--"}
-                      unit="m"
-                      formula="r = v / w"
-                    />
-                    <MetricCard
-                      label="Centripetal Accel"
-                      value={metrics.centripetalAccel ? formatValue(metrics.centripetalAccel, 2) : "--"}
-                      unit="m/s^2"
-                      formula="ac = v * w"
-                    />
-                    <MetricCard
-                      label="Wheel RPM"
-                      value={metrics.wheelRpm ? formatValue(metrics.wheelRpm, 1) : "--"}
-                      unit="rpm"
-                      formula="rpm = v / (2 * pi * r)"
                     />
                   </div>
                 </div>
