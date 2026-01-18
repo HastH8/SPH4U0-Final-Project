@@ -116,13 +116,19 @@ const getYDomain = (data, series) => {
 
 const ChassisModel = ({ rotation }) => {
 	const chassisRef = useRef(null);
-	const studXs = [-1.5, -0.75, 0, 0.75, 1.5];
-	const studZs = [-0.45, 0.45];
+	const studXs = [-1.2, -0.4, 0.4, 1.2];
+	const studZs = [-0.5, 0.5];
 	const wheelPositions = [
-		[1.55, -0.25, 0.95],
-		[-1.55, -0.25, 0.95],
-		[1.55, -0.25, -0.95],
-		[-1.55, -0.25, -0.95],
+		[1.55, -0.15, 0.95],
+		[-1.55, -0.15, 0.95],
+		[1.55, -0.15, -0.95],
+		[-1.55, -0.15, -0.95],
+	];
+	const archPositions = [
+		[1.45, 0.1, 0.95],
+		[-1.45, 0.1, 0.95],
+		[1.45, 0.1, -0.95],
+		[-1.45, 0.1, -0.95],
 	];
 
 	useFrame(() => {
@@ -138,28 +144,27 @@ const ChassisModel = ({ rotation }) => {
 
 	return (
 		<group ref={chassisRef}>
-			<mesh position={[0, -0.18, 0]}>
-				<boxGeometry args={[3.9, 0.18, 1.7]} />
-				<meshStandardMaterial color="#111827" metalness={0.15} roughness={0.85} />
+			<mesh position={[0, -0.22, 0]}>
+				<boxGeometry args={[4.3, 0.16, 2.0]} />
+				<meshStandardMaterial color="#0f172a" metalness={0.2} roughness={0.8} />
 			</mesh>
-			<mesh position={[0, 0.05, 0]}>
-				<boxGeometry args={[4.0, 0.4, 1.8]} />
+			<mesh position={[0, 0.02, 0]}>
+				<boxGeometry args={[4.2, 0.36, 1.9]} />
 				<meshStandardMaterial color="#dc2626" metalness={0.25} roughness={0.35} />
 			</mesh>
-
-			<mesh position={[0.95, 0.38, 0]}>
-				<boxGeometry args={[1.55, 0.28, 1.45]} />
-				<meshStandardMaterial color="#ef4444" metalness={0.2} roughness={0.35} />
+			<mesh position={[1.25, 0.22, 0]}>
+				<boxGeometry args={[1.7, 0.22, 1.8]} />
+				<meshStandardMaterial color="#b91c1c" metalness={0.2} roughness={0.4} />
 			</mesh>
-			<mesh position={[-0.45, 0.58, 0]}>
-				<boxGeometry args={[1.45, 0.65, 1.35]} />
-				<meshStandardMaterial color="#facc15" metalness={0.15} roughness={0.4} />
+			<mesh position={[-0.35, 0.48, 0]}>
+				<boxGeometry args={[2.15, 0.52, 1.6]} />
+				<meshStandardMaterial color="#dc2626" metalness={0.2} roughness={0.35} />
 			</mesh>
-			<mesh position={[-0.45, 0.95, 0]}>
-				<boxGeometry args={[1.1, 0.22, 1.05]} />
-				<meshStandardMaterial color="#fde68a" metalness={0.1} roughness={0.45} />
+			<mesh position={[-0.35, 0.84, 0]}>
+				<boxGeometry args={[1.55, 0.24, 1.25]} />
+				<meshStandardMaterial color="#e5e7eb" metalness={0.35} roughness={0.4} />
 			</mesh>
-			<mesh position={[0.2, 0.7, 0]} rotation={[0, 0, -0.35]}>
+			<mesh position={[0.55, 0.66, 0]} rotation={[0, 0, -0.38]}>
 				<boxGeometry args={[0.9, 0.06, 1.1]} />
 				<meshStandardMaterial
 					color="#7dd3fc"
@@ -169,50 +174,70 @@ const ChassisModel = ({ rotation }) => {
 					roughness={0.2}
 				/>
 			</mesh>
+			<mesh position={[-1.75, 0.55, 0]}>
+				<boxGeometry args={[0.75, 0.12, 1.2]} />
+				<meshStandardMaterial color="#111827" metalness={0.15} roughness={0.6} />
+			</mesh>
 
-			<mesh position={[1.98, 0.08, 0]}>
-				<boxGeometry args={[0.16, 0.24, 1.65]} />
-				<meshStandardMaterial color="#111827" metalness={0.2} roughness={0.7} />
+			<mesh position={[2.1, 0.08, 0]}>
+				<boxGeometry args={[0.12, 0.22, 1.7]} />
+				<meshStandardMaterial color="#111827" metalness={0.25} roughness={0.65} />
 			</mesh>
-			<mesh position={[-1.98, 0.08, 0]}>
-				<boxGeometry args={[0.16, 0.24, 1.65]} />
-				<meshStandardMaterial color="#111827" metalness={0.2} roughness={0.7} />
+			<mesh position={[-2.1, 0.08, 0]}>
+				<boxGeometry args={[0.12, 0.22, 1.7]} />
+				<meshStandardMaterial color="#111827" metalness={0.25} roughness={0.65} />
 			</mesh>
+
+			<mesh position={[0, -0.04, 0.98]}>
+				<boxGeometry args={[3.9, 0.1, 0.08]} />
+				<meshStandardMaterial color="#111827" metalness={0.2} roughness={0.8} />
+			</mesh>
+			<mesh position={[0, -0.04, -0.98]}>
+				<boxGeometry args={[3.9, 0.1, 0.08]} />
+				<meshStandardMaterial color="#111827" metalness={0.2} roughness={0.8} />
+			</mesh>
+
+			{archPositions.map(([x, y, z]) => (
+				<mesh key={`arch-${x}-${z}`} position={[x, y, z]}>
+					<boxGeometry args={[0.65, 0.2, 0.45]} />
+					<meshStandardMaterial color="#991b1b" metalness={0.2} roughness={0.5} />
+				</mesh>
+			))}
 
 			{studXs.flatMap((x) =>
 				studZs.map((z) => (
-					<mesh key={`stud-${x}-${z}`} position={[x, 0.28, z]}>
+					<mesh key={`stud-${x}-${z}`} position={[x, 0.27, z]}>
 						<cylinderGeometry args={[0.16, 0.16, 0.08, 14]} />
-						<meshStandardMaterial color="#fef3c7" metalness={0.1} roughness={0.6} />
+						<meshStandardMaterial color="#fecaca" metalness={0.1} roughness={0.6} />
 					</mesh>
 				))
 			)}
 
 			{wheelPositions.map(([x, y, z]) => (
-				<group key={`wheel-${x}-${z}`} position={[x, y, z]} rotation={[0, 0, Math.PI / 2]}>
+				<group key={`wheel-${x}-${z}`} position={[x, y, z]} rotation={[Math.PI / 2, 0, 0]}>
 					<mesh>
-						<cylinderGeometry args={[0.35, 0.35, 0.26, 24]} />
+						<cylinderGeometry args={[0.35, 0.35, 0.28, 24]} />
 						<meshStandardMaterial color="#0b0f1a" metalness={0.2} roughness={0.85} />
 					</mesh>
 					<mesh>
-						<cylinderGeometry args={[0.2, 0.2, 0.28, 20]} />
+						<cylinderGeometry args={[0.2, 0.2, 0.2, 20]} />
 						<meshStandardMaterial color="#9ca3af" metalness={0.6} roughness={0.35} />
 					</mesh>
 					<mesh>
-						<cylinderGeometry args={[0.12, 0.12, 0.3, 16]} />
+						<cylinderGeometry args={[0.11, 0.11, 0.16, 16]} />
 						<meshStandardMaterial color="#e5e7eb" metalness={0.7} roughness={0.25} />
 					</mesh>
 				</group>
 			))}
 
 			{[
-				[2.03, 0.16, 0.5, "#fde68a", "#f59e0b"],
-				[2.03, 0.16, -0.5, "#fde68a", "#f59e0b"],
-				[-2.03, 0.16, 0.5, "#f87171", "#ef4444"],
-				[-2.03, 0.16, -0.5, "#f87171", "#ef4444"],
+				[2.12, 0.18, 0.55, "#fde68a", "#f59e0b"],
+				[2.12, 0.18, -0.55, "#fde68a", "#f59e0b"],
+				[-2.12, 0.18, 0.55, "#f87171", "#ef4444"],
+				[-2.12, 0.18, -0.55, "#f87171", "#ef4444"],
 			].map(([x, y, z, color, emissive]) => (
 				<mesh key={`light-${x}-${z}`} position={[x, y, z]}>
-					<boxGeometry args={[0.08, 0.12, 0.2]} />
+					<boxGeometry args={[0.1, 0.12, 0.22]} />
 					<meshStandardMaterial
 						color={color}
 						emissive={emissive}
