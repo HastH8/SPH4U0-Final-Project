@@ -662,7 +662,9 @@ const LiveGraph = ({ history, data, view, windowSeconds, paused, stretch = false
 		const displayRotation = dragMode ? [0, 0, 0] : rotation;
 
 		return (
-			<div className={`${stretch ? "h-full" : "h-[360px]"} w-full`}>
+			<div
+				className={`${stretch ? "h-full" : ""} w-full flex flex-col`}
+			>
 				<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
 					<p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-600 dark:text-white/60">
 						Orientation View
@@ -686,7 +688,7 @@ const LiveGraph = ({ history, data, view, windowSeconds, paused, stretch = false
 				</div>
 				<div
 					className={`flex w-full items-center justify-center ${
-						stretch ? "h-full min-h-[320px]" : "h-[320px]"
+						stretch ? "flex-1 min-h-[320px]" : "h-[320px]"
 					}`}
 				>
 					<div className="h-full w-full overflow-hidden rounded-[24px] border border-white/10 bg-white/5">
