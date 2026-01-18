@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ParentSize } from "@visx/responsive";
 import { Group } from "@visx/group";
 import { LinePath } from "@visx/shape";
@@ -83,6 +83,12 @@ const GRAPH_CONFIG = {
 
 const CHART_MARGIN = { top: 12, right: 18, bottom: 30, left: 44 };
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+const DEFAULT_ORBIT = {
+	radius: 5.8,
+	polar: 1.1,
+	azimuth: 1.58,
+};
+const CAMERA_TARGET = { x: 0, y: 0.2, z: 0 };
 
 const formatTime = (timestamp) => {
 	if (!timestamp) return "";
@@ -150,26 +156,26 @@ const ChassisModel = ({ rotation }) => {
 			</mesh>
 			<mesh position={[0, 0.02, 0]}>
 				<boxGeometry args={[4.2, 0.36, 1.9]} />
-				<meshStandardMaterial color="#dc2626" metalness={0.25} roughness={0.35} />
+				<meshStandardMaterial color="#e11d48" metalness={0.2} roughness={0.4} />
 			</mesh>
 			<mesh position={[1.25, 0.22, 0]}>
 				<boxGeometry args={[1.7, 0.22, 1.8]} />
-				<meshStandardMaterial color="#b91c1c" metalness={0.2} roughness={0.4} />
+				<meshStandardMaterial color="#f43f5e" metalness={0.15} roughness={0.35} />
 			</mesh>
 			<mesh position={[-0.35, 0.48, 0]}>
 				<boxGeometry args={[2.15, 0.52, 1.6]} />
-				<meshStandardMaterial color="#dc2626" metalness={0.2} roughness={0.35} />
+				<meshStandardMaterial color="#e11d48" metalness={0.2} roughness={0.35} />
 			</mesh>
 			<mesh position={[-0.35, 0.84, 0]}>
 				<boxGeometry args={[1.55, 0.24, 1.25]} />
-				<meshStandardMaterial color="#e5e7eb" metalness={0.35} roughness={0.4} />
+				<meshStandardMaterial color="#f8fafc" metalness={0.35} roughness={0.4} />
 			</mesh>
 			<mesh position={[0.55, 0.66, 0]} rotation={[0, 0, -0.38]}>
 				<boxGeometry args={[0.9, 0.06, 1.1]} />
 				<meshStandardMaterial
-					color="#7dd3fc"
+					color="#93c5fd"
 					transparent
-					opacity={0.65}
+					opacity={0.7}
 					metalness={0.1}
 					roughness={0.2}
 				/>
@@ -200,7 +206,7 @@ const ChassisModel = ({ rotation }) => {
 			{archPositions.map(([x, y, z]) => (
 				<mesh key={`arch-${x}-${z}`} position={[x, y, z]}>
 					<boxGeometry args={[0.65, 0.2, 0.45]} />
-					<meshStandardMaterial color="#991b1b" metalness={0.2} roughness={0.5} />
+					<meshStandardMaterial color="#1f2937" metalness={0.2} roughness={0.5} />
 				</mesh>
 			))}
 
@@ -208,7 +214,7 @@ const ChassisModel = ({ rotation }) => {
 				studZs.map((z) => (
 					<mesh key={`stud-${x}-${z}`} position={[x, 0.27, z]}>
 						<cylinderGeometry args={[0.16, 0.16, 0.08, 14]} />
-						<meshStandardMaterial color="#fecaca" metalness={0.1} roughness={0.6} />
+						<meshStandardMaterial color="#fca5a5" metalness={0.1} roughness={0.6} />
 					</mesh>
 				))
 			)}
@@ -221,12 +227,22 @@ const ChassisModel = ({ rotation }) => {
 					</mesh>
 					<mesh>
 						<cylinderGeometry args={[0.2, 0.2, 0.2, 20]} />
-						<meshStandardMaterial color="#9ca3af" metalness={0.6} roughness={0.35} />
+						<meshStandardMaterial color="#e5e7eb" metalness={0.7} roughness={0.25} />
 					</mesh>
 					<mesh>
 						<cylinderGeometry args={[0.11, 0.11, 0.16, 16]} />
-						<meshStandardMaterial color="#e5e7eb" metalness={0.7} roughness={0.25} />
+						<meshStandardMaterial color="#f8fafc" metalness={0.75} roughness={0.2} />
 					</mesh>
+					<mesh>
+						<torusGeometry args={[0.23, 0.05, 12, 28]} />
+						<meshStandardMaterial color="#f8fafc" metalness={0.8} roughness={0.25} />
+					</mesh>
+					{[0, Math.PI / 2, Math.PI / 4, -Math.PI / 4].map((angle) => (
+						<mesh key={`spoke-${x}-${z}-${angle}`} rotation={[0, 0, angle]}>
+							<boxGeometry args={[0.36, 0.05, 0.08]} />
+							<meshStandardMaterial color="#e5e7eb" metalness={0.6} roughness={0.3} />
+						</mesh>
+					))}
 				</group>
 			))}
 
@@ -250,7 +266,79 @@ const ChassisModel = ({ rotation }) => {
 	);
 };
 
-const OrientationChassis = ({ rotation }) => {
+const OrientationChassis = ({ rotation, dragMode }) => {
+	const { camera, gl } = useThree();
+	const orbitRef = useRef({ ...DEFAULT_ORBIT });
+	const dragRef = useRef({ active: false, lastX: 0, lastY: 0 });
+
+	const applyOrbit = useCallback(() => {
+		const { radius, polar, azimuth } = orbitRef.current;
+		const sinPolar = Math.sin(polar);
+		const x = radius * sinPolar * Math.cos(azimuth);
+		const y = radius * Math.cos(polar);
+		const z = radius * sinPolar * Math.sin(azimuth);
+		camera.position.set(x, y, z);
+		camera.lookAt(CAMERA_TARGET.x, CAMERA_TARGET.y, CAMERA_TARGET.z);
+		camera.updateProjectionMatrix();
+	}, [camera]);
+
+	useEffect(() => {
+		orbitRef.current = { ...DEFAULT_ORBIT };
+		applyOrbit();
+		if (!gl?.domElement) return;
+		gl.domElement.style.cursor = dragMode ? "grab" : "default";
+		gl.domElement.style.touchAction = dragMode ? "none" : "auto";
+	}, [dragMode, applyOrbit, gl]);
+
+	useEffect(() => {
+		if (!dragMode || !gl?.domElement) return;
+		const element = gl.domElement;
+
+		const handlePointerDown = (event) => {
+			dragRef.current.active = true;
+			dragRef.current.lastX = event.clientX;
+			dragRef.current.lastY = event.clientY;
+			element.style.cursor = "grabbing";
+			element.setPointerCapture(event.pointerId);
+		};
+
+		const handlePointerMove = (event) => {
+			if (!dragRef.current.active) return;
+			const dx = event.clientX - dragRef.current.lastX;
+			const dy = event.clientY - dragRef.current.lastY;
+			dragRef.current.lastX = event.clientX;
+			dragRef.current.lastY = event.clientY;
+
+			orbitRef.current.azimuth -= dx * 0.005;
+			orbitRef.current.polar = clamp(
+				orbitRef.current.polar + dy * 0.005,
+				0.45,
+				2.3
+			);
+			applyOrbit();
+		};
+
+		const handlePointerUp = (event) => {
+			dragRef.current.active = false;
+			element.style.cursor = "grab";
+			if (element.hasPointerCapture(event.pointerId)) {
+				element.releasePointerCapture(event.pointerId);
+			}
+		};
+
+		element.addEventListener("pointerdown", handlePointerDown);
+		element.addEventListener("pointermove", handlePointerMove);
+		element.addEventListener("pointerup", handlePointerUp);
+		element.addEventListener("pointerleave", handlePointerUp);
+
+		return () => {
+			element.removeEventListener("pointerdown", handlePointerDown);
+			element.removeEventListener("pointermove", handlePointerMove);
+			element.removeEventListener("pointerup", handlePointerUp);
+			element.removeEventListener("pointerleave", handlePointerUp);
+		};
+	}, [dragMode, applyOrbit, gl]);
+
 	return (
 		<Canvas camera={{ position: [0, 2.6, 5.2], fov: 42 }}>
 			<ambientLight intensity={0.65} />
@@ -543,6 +631,8 @@ const VisxLineChart = ({ data, config, view, series }) => {
 };
 
 const LiveGraph = ({ history, data, view, windowSeconds, paused, stretch = false }) => {
+	const [dragMode, setDragMode] = useState(false);
+
 	if (view === "orientation") {
 		const applyDeadzone = (value, zone = 0.03) =>
 			Math.abs(value) < zone ? 0 : value;
@@ -564,14 +654,39 @@ const LiveGraph = ({ history, data, view, windowSeconds, paused, stretch = false
 					-clamp(applyDeadzone((data?.gx ?? 0) * 0.24), -0.7, 0.7),
 			  ];
 
+		const displayRotation = dragMode ? [0, 0, 0] : rotation;
+
 		return (
-			<div
-				className={`flex w-full items-center justify-center ${
-					stretch ? "h-full min-h-[320px]" : "h-[320px] sm:h-[360px]"
-				}`}
-			>
-				<div className="h-full w-full overflow-hidden rounded-[24px] border border-white/10 bg-white/5">
-					<OrientationChassis rotation={rotation} />
+			<div className={`${stretch ? "h-full" : "h-[360px]"} w-full`}>
+				<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+					<p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-600 dark:text-white/60">
+						Orientation View
+					</p>
+					<div className="flex items-center gap-2 text-xs">
+						<span className="text-slate-500 dark:text-white/50">
+							{dragMode ? "Drag to orbit" : "Live IMU"}
+						</span>
+						<button
+							type="button"
+							onClick={() => setDragMode((prev) => !prev)}
+							className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.2em] transition ${
+								dragMode
+									? "border-neon-cyan/40 bg-neon-cyan/20 text-slate-900 dark:text-white"
+									: "border-black/10 bg-white/20 text-slate-600 hover:border-black/20 dark:border-white/20 dark:bg-white/10 dark:text-white/70"
+							}`}
+						>
+							{dragMode ? "Drag Mode On" : "Drag Mode"}
+						</button>
+					</div>
+				</div>
+				<div
+					className={`flex w-full items-center justify-center ${
+						stretch ? "h-full min-h-[320px]" : "h-[320px]"
+					}`}
+				>
+					<div className="h-full w-full overflow-hidden rounded-[24px] border border-white/10 bg-white/5">
+						<OrientationChassis rotation={displayRotation} dragMode={dragMode} />
+					</div>
 				</div>
 			</div>
 		);
