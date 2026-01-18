@@ -12,15 +12,16 @@
 #define IMPACT_JERK_THRESHOLD 120.0f
 #define IMPACT_HOLD_MS 220
 #define IMPACT_BASELINE_ALPHA 0.06f
-#define STREAM_RATE_MS 10
+#define STREAM_RATE_MS 20
 #define CALIBRATION_TIME_MS 2000
 #define SMOOTHING_ALPHA 0.25f
 #define GYRO_SMOOTHING_ALPHA 0.2f
 #define MADGWICK_BETA 0.1f
-#define VERBOSE_LOG true
+#define VERBOSE_LOG false
+#define LOG_WS_RX false
 #define WIFI_CONNECT_TIMEOUT_MS 15000
 #define WIFI_STATUS_LOG_INTERVAL_MS 1000
-#define WIFI_SCAN_ON_FAIL false
+#define WIFI_SCAN_ON_FAIL true
 #define WS_RECONNECT_INTERVAL_MS 5000
 
 // =========================
@@ -67,7 +68,7 @@ float impactPeak = 0.0f;
 unsigned long impactStartMs = 0;
 int stationaryCount = 0;
 unsigned long lastLog = 0;
-const unsigned long LOG_INTERVAL_MS = 0; // 0 = log every loop
+const unsigned long LOG_INTERVAL_MS = 1000; // 0 = log every loop
 
 // Madgwick quaternion
 float q0 = 1.0f;
@@ -467,7 +468,7 @@ void websocketEvent(WStype_t type, uint8_t *payload, size_t length) {
       }
       break;
     case WStype_TEXT:
-      if (VERBOSE_LOG) {
+      if (VERBOSE_LOG && LOG_WS_RX) {
         Serial.print("WebSocket RX: ");
         Serial.write(payload, length);
         Serial.println();

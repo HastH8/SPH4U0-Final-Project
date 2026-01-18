@@ -39,12 +39,15 @@ server.on("error", (err) => {
 const wss = new WebSocketServer({ server });
 const clients = new Set();
 
-const broadcast = (payload, senderId = "unknown") => {
-	log("Broadcasting message from", senderId, "to", clients.size, "clients");
+const broadcast = (payload, senderSocket = null) => {
+	const senderId = senderSocket?.id ?? "unknown";
+	let delivered = 0;
 	for (const client of clients) {
+		if (client === senderSocket) continue;
 		if (client.readyState === client.OPEN) {
 			try {
 				client.send(payload);
+				delivered += 1;
 				log("WS sent to", client.id, "bytes:", payload.length);
 			} catch (err) {
 				log("WS send error to", client.id, err?.message || err);
@@ -53,6 +56,7 @@ const broadcast = (payload, senderId = "unknown") => {
 			log("WS skip send (not open)", client.id, "state:", client.readyState);
 		}
 	}
+	log("Broadcasting message from", senderId, "to", delivered, "clients");
 };
 
 wss.on("connection", (socket, req) => {
@@ -82,7 +86,7 @@ wss.on("connection", (socket, req) => {
 			isBinary,
 		});
 		log("WS payload:", payload);
-		broadcast(payload, socket.id);
+		broadcast(payload, socket);
 	});
 
 	socket.on("close", (code, reason) => {
