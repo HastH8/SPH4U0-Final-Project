@@ -233,7 +233,7 @@ const ChassisModel = ({ rotation }) => {
 						<cylinderGeometry args={[0.11, 0.11, 0.16, 16]} />
 						<meshStandardMaterial color="#f8fafc" metalness={0.75} roughness={0.2} />
 					</mesh>
-					<mesh>
+					<mesh rotation={[Math.PI / 2, 0, 0]}>
 						<torusGeometry args={[0.23, 0.05, 12, 28]} />
 						<meshStandardMaterial color="#f8fafc" metalness={0.8} roughness={0.25} />
 					</mesh>
